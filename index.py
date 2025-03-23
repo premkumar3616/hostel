@@ -27,13 +27,14 @@ app = Flask(__name__)
 UPLOAD_FOLDER = 'static/uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+CSV_EXTENSIONS = {'csv'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-ALLOWED_EXTENSIONS = {'csv'}
+
 ist = timezone('Asia/Kolkata')
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+def allowed_file(filename, extensions=IMAGE_EXTENSIONS):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in extensions
 
 app.secret_key = "Shannu"
 serializer = URLSafeTimedSerializer(app.secret_key)
@@ -1489,7 +1490,7 @@ def add_single_student():
             flash('No selected file', 'error')
             return redirect(url_for('addStudent'))
             
-        if file and allowed_file(file.filename):
+        if file and allowed_file(file.filename, IMAGE_EXTENSIONS):
             filename = secure_filename(file.filename)
             file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
             file.save(file_path)
