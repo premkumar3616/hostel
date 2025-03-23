@@ -1244,6 +1244,7 @@ def reset_permissions_db():
 @app.route('/addStudent')
 @login_required(role='admin')  # Only admin can access
 def addStudent():
+    print(f"Session: {session}")
     return render_template('add_student.html')
 
 @app.route('/removeStudent')
