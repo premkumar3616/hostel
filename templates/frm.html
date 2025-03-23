@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Permission Form</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='form.css') }}">
+</head>
+<body>
+    <div class="logo-container">
+        <img src="static/sasilogo-removebg-preview.png" alt="SASI Institute Logo">
+    </div>
+    <div class="form-container">
+        <h1>Permission Form</h1>
+        <a href="/dashboard" class="btn-back">Back</a>
+        <div class="notice">
+            <p style="color: red; font-weight: bolder;">Note :</p>
+            <p><span id="clr">Outing</span> : 2 times per month</p>
+            <p><span id="clr">Leave</span> : 1 time per month</p>
+        </div>
+        <br>
+        <form id="permission-form" enctype="multipart/form-data">
+            <label>Permission Type:</label>
+            <div class="permission-type">
+                <input type="radio" id="outing" name="status" value="Outing" required>
+                <label for="outing">Outing</label>
+                <input type="radio" id="leave" name="status" value="Leave">
+                <label for="leave">Leave</label>
+            </div>
+
+            <!-- Outing Time Fields -->
+            <div id="outing-time" style="display: none;">
+                <label for="outing-start-date">Date:</label>
+                <input type="date" id="outing-start-date" name="outing_start_date">
+                <label for="start-time">Start Time:</label>
+                <input type="time" id="start-time" name="start_time">
+                <label for="end-time">End Time:</label>
+                <input type="time" id="end-time" name="end_time">
+            </div>
+
+            <!-- Leave Date Fields -->
+            <div id="leave-date" style="display: none;">
+                <label for="leave-start-date">Start Date:</label>
+                <input type="date" id="leave-start-date" name="leave_start_date">
+                <label for="end-date">End Date:</label>
+                <input type="date" id="end-date" name="end_date">
+            </div>
+
+            <label for="cause">Cause:</label>
+            <textarea id="cause" name="cause" placeholder="Enter the reason for permission..." required></textarea>
+
+            <!-- Letter Image Upload (compulsory for female students) -->
+            <div id="letter-upload" style="display: none;">
+                <label for="letter_image">Upload Letter (Compulsory for Female Students):</label>
+                <input type="file" id="letter_image" name="letter_image" accept="image/png, image/jpeg, image/jpg">
+            </div>
+
+            <button type="submit" class="btn btn-submit">Submit</button>
+            <button type="reset" class="btn btn-reset">Reset</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", async function () {
+            const outingRadio = document.getElementById("outing");
+            const leaveRadio = document.getElementById("leave");
+            const outingTimeDiv = document.getElementById("outing-time");
+            const leaveDateDiv = document.getElementById("leave-date");
+            const startTimeInput = document.getElementById("start-time");
+            const endTimeInput = document.getElementById("end-time");
+            const outingStartDateInput = document.getElementById("outing-start-date");
+            const leaveStartDateInput = document.getElementById("leave-start-date");
+            const endDateInput = document.getElementById("end-date");
+            const letterUploadDiv = document.getElementById("letter-upload");
+            const letterImageInput = document.getElementById("letter_image");
+    
+            let userGender = '';
+    
+            // Fetch session data
+            try {
+                const sessionResponse = await fetch('/get_session');
+                if (!sessionResponse.ok) {
+                    console.error("Session fetch failed:", sessionResponse.status, await sessionResponse.text());
+                    alert("Please log in to access this form.");
+                    window.location.href = '/';
+                    return;
+                }
+                const sessionData = await sessionResponse.json();
+    
+                if (sessionData.category !== 'student') {
+                    console.error("User is not a student:", sessionData.category);
+                    alert("This page is only for students.");
+                    window.location.href = '/';
+                    return;
+                }
+    
+                // Fetch student details
+                const userResponse = await fetch('/get_student_details', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ student_regd: sessionData.username })
+                });
+    
+                if (!userResponse.ok) {
+                    console.error("Student details fetch failed:", userResponse.status, await userResponse.text());
+                    alert("Unable to fetch your details.");
+                    return;
+                }
+    
+                const studentData = await userResponse.json();
+                if (studentData.success) {
+                    userGender = studentData.student.gender.toLowerCase();
+                } else {
+                    console.error("Student data error:", studentData.message);
+                    alert("Error fetching your details: " + studentData.message);
+                    return;
+                }
+            } catch (error) {
+                console.error("Error fetching user data:", error);
+                alert("An error occurred while loading the form. Please try again.");
+                return;
+            }
+    
+            function toggleFields() {
+                if (outingRadio.checked) {
+                    outingTimeDiv.style.display = "block";
+                    leaveDateDiv.style.display = "none";
+                    outingStartDateInput.setAttribute("required", "true");
+                    startTimeInput.setAttribute("required", "true");
+                    endTimeInput.setAttribute("required", "true");
+                    leaveStartDateInput.removeAttribute("required");
+                    endDateInput.removeAttribute("required");
+                } else if (leaveRadio.checked) {
+                    outingTimeDiv.style.display = "none";
+                    leaveDateDiv.style.display = "block";
+                    leaveStartDateInput.setAttribute("required", "true");
+                    endDateInput.setAttribute("required", "true");
+                    outingStartDateInput.removeAttribute("required");
+                    startTimeInput.removeAttribute("required");
+                    endTimeInput.removeAttribute("required");
+                }
+    
+                // Show letter upload field for female students and make it required
+                if (userGender === 'female') {
+                    letterUploadDiv.style.display = "block";
+                    letterImageInput.setAttribute("required", "true");
+                } else {
+                    letterUploadDiv.style.display = "none";
+                    letterImageInput.removeAttribute("required");
+                }
+            }
+    
+            toggleFields();
+            outingRadio.addEventListener("change", toggleFields);
+            leaveRadio.addEventListener("change", toggleFields);
+    
+            startTimeInput.addEventListener("change", function () {
+                if (startTimeInput.value) {
+                    let [hours, minutes] = startTimeInput.value.split(":").map(Number);
+                    minutes += 1;
+                    if (minutes === 60) {
+                        minutes = 0;
+                        hours += 1;
+                    }
+                    if (hours === 24) hours = 0;
+                    const minEndTime = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                    endTimeInput.min = minEndTime;
+                    endTimeInput.value = "";
+                }
+            });
+    
+            leaveStartDateInput.addEventListener("change", function () {
+                if (leaveStartDateInput.value) {
+                    const minEndDate = new Date(leaveStartDateInput.value);
+                    minEndDate.setDate(minEndDate.getDate() + 1);
+                    const formattedMinDate = minEndDate.toISOString().split("T")[0];
+                    endDateInput.min = formattedMinDate;
+                    endDateInput.value = "";
+                }
+            });
+    
+            document.getElementById('permission-form').addEventListener('submit', async function (e) {
+                e.preventDefault();
+    
+                if (!confirm("Are you sure you want to submit the form?")) return;
+    
+                const permissionType = document.querySelector('input[name="status"]:checked').value;
+                const formData = new FormData();
+    
+                formData.append('permission_type', permissionType);
+                formData.append('reason', document.getElementById("cause").value);
+    
+                if (permissionType === "Outing") {
+                    formData.append('start_time', startTimeInput.value || null);
+                    formData.append('end_time', endTimeInput.value || null);
+                    formData.append('start_date', outingStartDateInput.value || null);
+                } else if (permissionType === "Leave") {
+                    formData.append('start_date', leaveStartDateInput.value || null);
+                    formData.append('end_date', endDateInput.value || null);
+                }
+    
+                if (userGender === 'female') {
+                    if (!letterImageInput.files[0]) {
+                        alert("Letter upload is compulsory for female students.");
+                        return;
+                    }
+                    formData.append('letter_image', letterImageInput.files[0]);
+                }
+    
+                try {
+                    const response = await fetch('/submit_permission', {
+                        method: 'POST',
+                        body: formData
+                    });
+    
+                    const result = await response.json();
+                    alert(result.message);
+    
+                    if (response.ok) {
+                        document.getElementById("permission-form").reset();
+                        toggleFields();
+                    }
+                } catch (error) {
+                    console.error("Error submitting form:", error);
+                    alert("An error occurred. Please try again.");
+                }
+            });
+        });
+    </script>
+</body>
+</html>

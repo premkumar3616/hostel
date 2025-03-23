@@ -1,0 +1,203 @@
+/* Base Styles */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: white; /* White background */
+    margin: 0;
+    padding: 1rem;
+    color: #840002; /* Maroon text */
+  }
+  
+  .container {
+    width: 90%;
+    max-width: 1200px;
+    margin: 20px auto;
+    background: white; /* White background */
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #840002; /* Maroon border */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease; /* Smooth scaling on hover */
+  }
+  
+  .container:hover {
+    transform: scale(1.02); /* Slight scale-up on hover for interactivity */
+  }
+  
+  h2 {
+    color: #840002; /* Maroon title */
+    font-size: 1.75rem;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  
+  label {
+    font-weight: 600;
+    color: #840002; /* Maroon label */
+    font-size: 1.1rem;
+    display: block;
+    margin-bottom: 10px;
+  }
+  
+  select {
+    padding: 10px;
+    margin-bottom: 20px;
+    border-radius: 5px;
+    border: 1px solid #840002; /* Maroon border */
+    background-color: white; /* White background */
+    color: #840002; /* Maroon text */
+    font-size: 1rem;
+    width: 100%;
+    max-width: 300px;
+    cursor: pointer;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  }
+  
+  select:focus {
+    outline: none;
+    border-color: #630002; /* Darker maroon on focus */
+    box-shadow: 0 0 5px rgba(132, 0, 2, 0.5); /* Maroon glow */
+  }
+  
+  button {
+    padding: 10px 20px;
+    background-color: #840002; /* Maroon button */
+    color: white; /* White text */
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+  
+  button:hover {
+    background-color: #630002; /* Darker maroon on hover */
+    transform: translateY(-2px); /* Slight lift on hover */
+  }
+  
+  button:active {
+    transform: translateY(0); /* Reset on click */
+  }
+  
+  /* Table Wrapper */
+  .table-wrapper {
+    width: 90%;
+    max-width: 1200px;
+    margin: 20px auto;
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 2px solid #840002; /* Maroon border */
+    background-color: white; /* White background */
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Table Styles */
+  .permissions-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .permissions-table th {
+    background-color: #840002; /* Maroon header */
+    color: white; /* White text */
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    border-bottom: 2px solid white; /* White separator */
+  }
+  
+  .permissions-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #840002; /* Maroon border */
+    font-size: 1rem;
+    color: #840002; /* Maroon text */
+    transition: background-color 0.3s ease;
+  }
+  
+  .permissions-table tr:nth-child(even) {
+    background-color: #f8ebeb; /* Light maroon tint for even rows */
+  }
+  
+  .permissions-table tr:hover {
+    background-color: #f0dada; /* Slightly darker maroon tint on hover */
+    cursor: pointer;
+  }
+  
+  /* Responsive Design */
+  
+  /* Small Devices (up to 480px) */
+  @media (max-width: 480px) {
+    body {
+      padding: 0.5rem;
+    }
+  
+    .container,
+    .table-wrapper {
+      width: 95%;
+      margin: 10px auto;
+    }
+  
+    h2 {
+      font-size: 1.25rem;
+    }
+  
+    label {
+      font-size: 1rem;
+    }
+  
+    select {
+      padding: 8px;
+      font-size: 0.9rem;
+    }
+  
+    button {
+      padding: 8px 15px;
+      font-size: 0.9rem;
+    }
+  
+    .permissions-table th,
+    .permissions-table td {
+      padding: 8px 10px;
+      font-size: 0.8rem;
+    }
+  }
+  
+  /* Medium Devices (481px - 768px) */
+  @media (min-width: 481px) and (max-width: 768px) {
+    .container,
+    .table-wrapper {
+      width: 95%;
+    }
+  
+    h2 {
+      font-size: 1.5rem;
+    }
+  
+    .permissions-table th,
+    .permissions-table td {
+      padding: 10px 12px;
+      font-size: 0.9rem;
+    }
+  }
+  
+  /* Tablets and Larger (769px and up) */
+  @media (min-width: 769px) {
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+  
+    select {
+      width: 250px;
+    }
+  
+    button {
+      margin-left: 10px;
+    }
+  }

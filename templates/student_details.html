@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>View Students by Branch</title>
+    <link rel="stylesheet" href="static/details.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+</head>
+<body>
+
+    <div class="container">
+        <button class="back-btn" onclick="window.history.back()">Back</button>
+        <h2>View Student Details</h2>
+        <label for="department">Select Department:</label>
+        <select id="branch">
+            <option value="CIC">CIC</option>
+            <option value="CSE">CSE</option>
+            <option value="ECE">ECE</option>
+            <option value="CSM">CSM</option>
+            <option value="EEE">EEE</option>
+            <option value="CSD">CSD</option>
+            <option value="MECH">MECH</option>
+            <option value="AIML">AIML</option>
+            <option value="CST">CST</option>
+            <option value="ECT">ECT</option>
+            <option value="CIVIL">CIVIL</option>
+            <option value="IT">IT</option>
+        </select>
+        <button onclick="fetchStudentsByBranch()">Search</button>
+    </div>
+
+    <!-- Student Details Table -->
+    <div class="table-wrapper">
+        <table id="student-details-table" class="permissions-table">
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Register Number</th>
+                    <th>Email</th>
+                    <th>Department</th>
+                    <th>Phone</th>
+                    <th>Parent Phone</th>
+                    <th>Accepted Leave Requests</th>
+                    <th>Accepted Outing Requests</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Student details will be populated here dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        function fetchStudentsByBranch() {
+            const branch = document.getElementById('branch').value;
+            console.log("Selected Branch:", branch); 
+
+            fetch(`/get_students_by_branch?branch=${branch}`)  // Use GET request
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Response Data:", data);
+
+                    if (data.success) {
+                        const tableBody = document.querySelector('#student-details-table tbody');
+                        tableBody.innerHTML = ''; // Clear existing rows
+
+                        data.students.forEach(student => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                 <td>${student.name}</td>
+                                <td>${student.regd}</td>
+                                <td>${student.email}</td>
+                                <td>${student.dept}</td>
+                                <td>${student.student_phone}</td>
+                                <td>${student.parent_phone}</td>
+                                <td>${student.accepted_leave_count}</td>
+                                <td>${student.accepted_outing_count}</td>
+                            `;
+                            tableBody.appendChild(row);
+                        });
+                    } else {
+                        alert(data.message || 'No students found for this branch.');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>
