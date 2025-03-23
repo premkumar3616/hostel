@@ -1398,7 +1398,7 @@ def upload1():
         flash('No selected file', 'error')
         return redirect(request.url)
     
-    if file and allowed_file(file.filename):
+    if file and allowed_file(file.filename,CSV_EXTENSIONS):
         filename = secure_filename(file.filename)
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(filepath)
@@ -1466,7 +1466,7 @@ def add_single_student():
         regd = request.form['regd']
         first_name = request.form['first_name']
         last_name = request.form['last_name']
-        gender = request.form['gender']
+        gender = request.form.get('gender', 'not prefer to say')
         email = request.form['email']
         dept = request.form['dept']
         student_phone = request.form['student_phone']
