@@ -1,5 +1,5 @@
-from app import app,db
-from app import Faculty  # Assuming you have a User model
+from index import app,db
+from index import Faculty  # Assuming you have a User model
 from werkzeug.security import generate_password_hash
 
 # Dummy data
