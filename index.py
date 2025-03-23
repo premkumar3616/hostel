@@ -55,11 +55,9 @@ ist = timezone('Asia/Kolkata')
 # Database Configuration
 
 # app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql://postgres:{escaped_password}@localhost:5000/users"
-<<<<<<< HEAD:index.py
 app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://sasiusers_user:KbF29ulqMKOcPGRVqzUSeF4kSbo5ax1A@dpg-cvft1nofnakc739rm4og-a.oregon-postgres.render.com/sasiusers"
-=======
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://postgres:yRDLUwlFiLJlMZJNKEEYSuEGVzCNrFqD@postgres.railway.internal:5432/railway"
->>>>>>> 11678ffb01acf607aa41717d75a774d4b853ba8f:app.py
+
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 # app.config["SQLALCHEMY_BINDS"] = {
 #     "new_db": f"postgresql://postgres:{escaped_password}@localhost:5000/faculty_db",  # PostgreSQL for faculty
