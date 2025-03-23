@@ -1,1 +1,5 @@
 .vercel
+instacne/
+__pycache__/
+.venv/
+
