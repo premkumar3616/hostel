@@ -16,7 +16,7 @@
     
     <div class="faculty-info">
       <div class="faculty-photo">
-        <img src="{{faculty.photo}}" alt="Faculty">
+        <img src="{{ url_for('static', filename='uploads/' + faculty.photo) }}" alt="Faculty">
       </div>
       <div class="faculty-details">
         <h2 class="faculty-name">{{faculty.first_name}} {{faculty.last_name}}</h2>

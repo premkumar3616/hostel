@@ -158,6 +158,47 @@ def home():
 
 
 
+# @app.route('/login', methods=['POST'])
+# def login():
+#     data = request.get_json()
+#     username = data.get('username')
+#     password = data.get('password')
+
+#     print(f"Attempting login with username: {username}")  # Debug statement
+
+#     user = User.query.filter_by(regd=username).first()
+#     faculty = Faculty.query.filter_by(email=username).first()
+
+#     if user:
+#         print(f"User found: {user.regd}")  # Debug statement
+#         if not check_password_hash(user.password, password):
+#             print("Incorrect password")  # Debug statement
+#             return jsonify({"message": "Incorrect password"}), 400
+        
+#         session['username'] = username
+#         session['category'] = 'student'
+#         session.permanent = True 
+#         return jsonify({"message": "Login successful", "redirect": "/dashboard"}), 200
+
+#     elif faculty:
+#         print(f"Faculty found: {faculty.email}")  # Debug statement
+#         if not check_password_hash(faculty.password_hash, password):
+#             print("Incorrect password")  # Debug statement
+#             return jsonify({"message": "Incorrect password"}), 400
+
+#         session['username'] = username
+#         session['category'] = faculty.category.lower()  # Store faculty category
+#         session.permanent = True 
+#         if faculty.category.lower() == "admin":
+#             return jsonify({"message": "Login successful", "redirect": "/admin_dashboard"}), 200
+#         if faculty.category.lower() in ['hod','incharge']:
+#             return jsonify({"message": "Login successful", "redirect": "/faculty_dashboard"}), 200
+#         if faculty.category.lower() == "security":
+#             return jsonify({"message": "Login successful", "redirect": "/scan_qr"}), 200
+#     print("Username does not exist")  # Debug statement
+#     return jsonify({"message": "Username does not exist"}), 400
+
+
 @app.route('/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -166,38 +207,45 @@ def login():
 
     print(f"Attempting login with username: {username}")  # Debug statement
 
-    user = User.query.filter_by(regd=username).first()
-    faculty = Faculty.query.filter_by(email=username).first()
+    # Check for admin login using environment variables
+    admin_username = app.config['ADMIN_USERNAME']
+    admin_password = app.config['ADMIN_PASSWORD']
+    if username == admin_username and password == admin_password:
+        print(f"Admin login successful: {username}")
+        session['username'] = username
+        session['category'] = 'admin'
+        session.permanent = True
+        return jsonify({"message": "Login successful", "redirect": "/admin_dashboard"}), 200
 
+    # Check for student login
+    user = User.query.filter_by(regd=username).first()
     if user:
-        print(f"User found: {user.regd}")  # Debug statement
+        print(f"User found: {user.regd}")
         if not check_password_hash(user.password, password):
-            print("Incorrect password")  # Debug statement
+            print("Incorrect password")
             return jsonify({"message": "Incorrect password"}), 400
-        
         session['username'] = username
         session['category'] = 'student'
-        session.permanent = True 
+        session.permanent = True
         return jsonify({"message": "Login successful", "redirect": "/dashboard"}), 200
 
-    elif faculty:
-        print(f"Faculty found: {faculty.email}")  # Debug statement
+    # Check for faculty login
+    faculty = Faculty.query.filter_by(email=username).first()
+    if faculty:
+        print(f"Faculty found: {faculty.email}")
         if not check_password_hash(faculty.password_hash, password):
-            print("Incorrect password")  # Debug statement
+            print("Incorrect password")
             return jsonify({"message": "Incorrect password"}), 400
-
         session['username'] = username
-        session['category'] = faculty.category.lower()  # Store faculty category
-        session.permanent = True 
-        if faculty.category.lower() == "admin":
-            return jsonify({"message": "Login successful", "redirect": "/admin_dashboard"}), 200
-        if faculty.category.lower() in ['hod','incharge']:
+        session['category'] = faculty.category.lower()
+        session.permanent = True
+        if faculty.category.lower() in ['hod', 'incharge']:
             return jsonify({"message": "Login successful", "redirect": "/faculty_dashboard"}), 200
         if faculty.category.lower() == "security":
             return jsonify({"message": "Login successful", "redirect": "/scan_qr"}), 200
-    print("Username does not exist")  # Debug statement
-    return jsonify({"message": "Username does not exist"}), 400
 
+    print("Username does not exist")
+    return jsonify({"message": "Username does not exist"}), 400
 
 @app.route('/get_session')
 def get_session():
@@ -391,16 +439,17 @@ def student_dashboard(regd_no):
 
 
 @app.route('/admin_dashboard')
-
 @login_required(role='admin')
 def admin():
+    print(f"Session on admin_dashboard: {session}")  # Debug
     if 'username' not in session or session.get('category') not in ['admin']:
         return redirect(url_for('home'))
-
-    faculty = Faculty.query.filter_by(email=session['username']).first()
-    if not faculty:
-        return redirect(url_for('home'))
-    return render_template("admin.html")
+    # Remove faculty check since admin uses env vars, not Faculty table
+    response = make_response(render_template("admin.html"))
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.route('/new_password')
@@ -1906,13 +1955,26 @@ def add_faculty():
         # Hash the password
         hashed_password = generate_password_hash(password)
 
-        # Save the photo (if provided)
+        # Define the faculty uploads directory
+        faculty_upload_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'faculty')
+        if not os.path.exists(faculty_upload_dir):
+            os.makedirs(faculty_upload_dir, exist_ok=True)
+
+        # Save the photo (if provided) in static/uploads/faculty
         photo_path = None
-        if photo:
-            photo_filename = secure_filename(photo.filename)
-            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo_filename)
+        if photo and allowed_file(photo.filename, IMAGE_EXTENSIONS):
+            photo_filename = secure_filename(f"{email}_{photo.filename}")  # Unique filename using email
+            photo_path = os.path.join(faculty_upload_dir, photo_filename)
             photo.save(photo_path)
-            photo_path = f"static/uploads/{photo_filename}"
+            photo_path = f"faculty/{photo_filename}"  # Relative path for DB storage
+        else:
+            if photo:
+                return jsonify({"success": False, "message": "Invalid photo format. Only PNG, JPG, or JPEG allowed."}), 400
+
+        # Check if email already exists
+        existing_faculty = Faculty.query.filter_by(email=email).first()
+        if existing_faculty:
+            return jsonify({"success": False, "message": "Email is already in use by another faculty member."}), 400
 
         # Create a new Faculty object
         new_faculty = Faculty(
@@ -1937,6 +1999,7 @@ def add_faculty():
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
+
 @app.route('/remove_faculty', methods=['POST'])
 def remove_faculty():
     try:
@@ -1952,6 +2015,15 @@ def remove_faculty():
         if not faculty:
             return jsonify({"success": False, "message": "Faculty member not found."}), 404
 
+        # Delete the faculty photo if it exists
+        if faculty.photo:
+            photo_path = os.path.join(app.config['UPLOAD_FOLDER'], faculty.photo)
+            if os.path.exists(photo_path):
+                os.remove(photo_path)
+                print(f"Deleted faculty photo: {photo_path}")
+            else:
+                print(f"Faculty photo not found: {photo_path}")
+
         # Delete the faculty member from the database
         db.session.delete(faculty)
         db.session.commit()
@@ -1962,21 +2034,19 @@ def remove_faculty():
         db.session.rollback()
         return jsonify({"success": False, "message": str(e)}), 500
 
+
+
 @app.route('/get_faculty_by_department', methods=['GET'])
 def get_faculty_by_department():
     try:
         department = request.args.get('department')
-
         if not department:
             return jsonify({"success": False, "message": "Department is required."}), 400
 
-        # Find all faculty members in the department
         faculty_members = Faculty.query.filter_by(dept=department).all()
-
         if not faculty_members:
             return jsonify({"success": False, "message": "No faculty members found in this department."}), 404
 
-        # Return faculty details
         faculty_data = [
             {
                 "first_name": faculty.first_name,
@@ -1986,13 +2056,11 @@ def get_faculty_by_department():
                 "faculty_phone": faculty.faculty_phone,
                 "room_no": faculty.room_no,
                 "category": faculty.category,
-                "photo": faculty.photo if faculty.photo else "No photo available.jpg"
+                "photo": f"/static/uploads/{faculty.photo}" if faculty.photo else "/static/uploads/default_faculty.jpg",
             }
             for faculty in faculty_members
         ]
-
         return jsonify({"success": True, "faculty": faculty_data})
-
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
 
@@ -2083,13 +2151,9 @@ def modify_faculty():
 @app.route('/get_all_faculty', methods=['GET'])
 def get_all_faculty():
     try:
-        # Fetch all faculty members from the database
         faculty_members = Faculty.query.all()
-
         if not faculty_members:
             return jsonify({"success": False, "message": "No faculty members found."}), 404
-
-        # Return faculty details
         faculty_data = [
             {
                 "first_name": faculty.first_name,
@@ -2099,15 +2163,15 @@ def get_all_faculty():
                 "faculty_phone": faculty.faculty_phone,
                 "room_no": faculty.room_no,
                 "category": faculty.category,
-                "photo": faculty.photo or "static/uploads/default.jpg",  # Default photo if none is provided
+                "photo": f"/static/uploads/{faculty.photo}" if faculty.photo else "/static/uploads/default.png",
             }
             for faculty in faculty_members
         ]
-
         return jsonify({"success": True, "faculty": faculty_data})
-
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
+    
+
 
 if __name__ == '__main__':
     with app.app_context():

@@ -7,7 +7,6 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='adminn.css') }}">
 </head>
 <body>
-  <!-- Navbar -->
   <div class="navbar">
     <ul>
       <li><a href="{{ url_for('admin') }}">Home</a></li>
@@ -30,35 +29,30 @@
           <a href="{{'/viewFaculty'}}">View Faculty Details</a>
         </div>
       </li>
-      <!-- Logout and Change Password Buttons -->
       <li><a href="{{ url_for('logout') }}">Logout</a></li>
       <li><a href="{{ url_for('new_password') }}">Change Password</a></li>
     </ul>
   </div>
 
-  <!-- Main content -->
   <div class="container">
     <h1>Admin Panel</h1>
     <h1>Welcome, {{ session.get('username') }}!</h1>
 
-    <!-- Layout with Flexbox -->
     <div class="search-container">
-      <!-- Student Search Section -->
       <div class="search-section" id="student-search-section">
           <h2>Search for Students</h2>
           <form id="student-search-form" class="f1">
               <input type="text" id="student-search" placeholder="Search by registration number...">
-              <button type="button" id="search-student-btn">Search</button> <!-- Use type="button" -->
+              <button type="button" id="search-student-btn">Search</button>
           </form>
           <ul id="student-result-list"></ul>
       </div>
 
-      <!-- Faculty Search Section -->
       <div class="search-section" id="faculty-search-section">
           <h2>Search for Faculty</h2>
           <form id="faculty-search-form">
               <input type="text" id="faculty-search" placeholder="Search by department...">
-              <button type="button" id="search-faculty-btn">Search</button> <!-- Use type="button" -->
+              <button type="button" id="search-faculty-btn">Search</button>
           </form>
           <ul id="faculty-result-list"></ul>
       </div>
@@ -66,9 +60,8 @@
   </div>
 
   <script>
-    // Prevent form submission and handle student search
     document.getElementById('student-search-form').addEventListener('submit', function (event) {
-        event.preventDefault(); // Prevent form submission
+        event.preventDefault();
         searchStudent();
     });
     
@@ -91,27 +84,15 @@
             },
             body: JSON.stringify({ student_regd: searchTerm }),
         })
-        .then(response => {
-            if (!response.ok) {
-                return response.text().then(text => {
-                    throw new Error(`Server error: ${response.status} - ${text}`);
-                });
-            }
-            if (!response.headers.get('content-type')?.includes('application/json')) {
-                return response.text().then(text => {
-                    throw new Error('Expected JSON, got HTML: ' + text.slice(0, 50));
-                });
-            }
-            return response.json();
-        })
+        .then(response => response.json())
         .then(data => {
-            const resultList = document.getElementById('student-result-list'); // Ensure this targets the student list
-            resultList.innerHTML = ''; // Clear previous results
+            const resultList = document.getElementById('student-result-list');
+            resultList.innerHTML = '';
     
             if (data.success) {
                 const student = data.student;
-                const listItem = document.createElement('li');
                 const photoSrc = student.photo ? `/static/uploads/${student.photo}` : '/static/uploads/default_student.jpg';
+                const listItem = document.createElement('li');
                 listItem.innerHTML = `
                     <div class="details">
                         <strong>Name:</strong> ${student.name}<br>
@@ -137,9 +118,8 @@
         });
     }
     
-    // Prevent form submission and handle faculty search
     document.getElementById('faculty-search-form').addEventListener('submit', function (event) {
-        event.preventDefault(); // Prevent form submission
+        event.preventDefault();
         searchFaculty();
     });
     
@@ -158,13 +138,12 @@
         fetch(`/get_faculty_by_department?department=${encodeURIComponent(searchTerm)}`)
         .then(response => response.json())
         .then(data => {
-            const resultList = document.getElementById('faculty-result-list'); // Ensure this targets the faculty list
-            resultList.innerHTML = ''; // Clear previous results
+            const resultList = document.getElementById('faculty-result-list');
+            resultList.innerHTML = '';
     
             if (data.success) {
                 data.faculty.forEach(faculty => {
                     const listItem = document.createElement('li');
-                    const photoSrc = faculty.photo ? faculty.photo : '/static/uploads/default_faculty.jpg';
                     listItem.innerHTML = `
                         <div class="details">
                             <strong>Name:</strong> ${faculty.first_name} ${faculty.last_name}<br>
@@ -174,7 +153,7 @@
                             <strong>Room No:</strong> ${faculty.room_no}<br>
                             <strong>Category:</strong> ${faculty.category}<br>
                         </div>
-                        <img src="${photoSrc}" alt="Faculty Photo" onerror="this.src='/static/uploads/default_faculty.jpg';">
+                        <img src="${faculty.photo}" alt="Faculty Photo" onerror="this.src='/static/uploads/default_faculty.jpg';">
                     `;
                     resultList.appendChild(listItem);
                 });
@@ -188,17 +167,6 @@
             resultList.innerHTML = `<li>Error: ${error.message}</li>`;
         });
     }
-    </script>
-  <!-- <script>
-    window.onload = function () {
-      fetch("{{ url_for('home') }}", { method: "HEAD", cache: "no-cache" })
-        .then(response => {
-          if (!document.cookie.includes("session")) {
-            window.location.href = "{{ url_for('home') }}";  // Redirect if session is missing
-          }
-        });
-    };
-  </script> -->
-  
+  </script>
 </body>
 </html>
