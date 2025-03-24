@@ -25,7 +25,7 @@ import json
 import traceback
 import shutil
 import zipfile
-import time
+# import time
 import uuid
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static/uploads/'
@@ -130,7 +130,7 @@ class PermissionRequest(db.Model):
     incharge_status = db.Column(db.String(10), default='Pending')
     hod_message = db.Column(db.Text, default='NIL')
     incharge_message = db.Column(db.Text, default='NIL')
-    timestamp = db.Column(db.DateTime, default=lambda: datetime.now(ist))
+    timestamp = db.Column(db.DateTime, nullable=False)  # Simplified, set in route
     check_in_time = db.Column(db.DateTime, nullable=True)
     check_out_time = db.Column(db.DateTime, nullable=True)
     is_processed = db.Column(db.Boolean, default=False)
@@ -537,7 +537,6 @@ def submit_permission():
     data = request.form.to_dict()
     permission_type = data.get('permission_type')
 
-    # Handle letter image upload - compulsory for female students
     letter_image_path = None
     if user.gender.lower() == 'female':
         if 'letter_image' not in request.files or not request.files['letter_image'].filename:
@@ -550,7 +549,6 @@ def submit_permission():
             letter_image_path = f"static/uploads/{filename}"
         else:
             return jsonify({"message": "Invalid file type. Only PNG, JPG, or JPEG files are allowed."}), 400
-    # For non-female students, letter upload remains optional (no change needed here)
 
     try:
         new_request = PermissionRequest(
@@ -571,18 +569,18 @@ def submit_permission():
             letter_path=letter_image_path
         )
 
-        # Outing HOD approval logic
         if permission_type == "Outing":
             outing_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d').date()
             start_time = datetime.strptime(data.get('start_time'), '%H:%M').time()
             end_time = datetime.strptime(data.get('end_time'), '%H:%M').time()
+            # Use datetime.time objects for comparison
             if outing_date.weekday() <= 5 and start_time >= time(8, 30) and end_time <= time(16, 30):
                 new_request.hod_status = "Pending"
 
         db.session.add(new_request)
         db.session.commit()
 
-        # Send emails (unchanged logic, included for completeness)
+        # Email sending logic remains unchanged
         if permission_type == "Leave":
             hod = Faculty.query.filter_by(dept=user.dept, category="HOD").first()
             incharge = Faculty.query.filter_by(category="Incharge").first()
@@ -622,8 +620,6 @@ def submit_permission():
                  End Date: {data.get('end_date') or 'N/A'}
                  Reason: {data.get('reason')}
 
-                 
-
                 {'Letter: ' + url_for('static', filename=new_request.letter_path.split('/', 1)[1], _external=True) if new_request.letter_path else ''}
                 Please log in to the faculty dashboard to review and take action on this request.
 
@@ -639,7 +635,7 @@ def submit_permission():
                 msg.body = f"""
                 Dear {incharge.first_name},
 
-                 A new leave request has been submitted by {user.first_name} {user.last_name}.
+                 A new outing request has been submitted by {user.first_name} {user.last_name}.
 
                  🏫 Department: {user.dept}
                  📌 Student: {user.first_name} {user.last_name} ({user.regd})
@@ -649,8 +645,6 @@ def submit_permission():
                  Start Time: {data.get('start_time') or 'N/A'}
                  End Time: {data.get('end_time') or 'N/A'}
                  Reason: {data.get('reason')}
-
-                 
 
                 {'Letter: ' + url_for('static', filename=new_request.letter_path.split('/', 1)[1], _external=True) if new_request.letter_path else ''}
                 Please log in to the faculty dashboard to review and take action on this request.
@@ -662,9 +656,9 @@ def submit_permission():
             if new_request.hod_status == "Pending" and hod:
                 msg = Message("New Outing Request - HOD", sender="pragadaprem143@gmail.com", recipients=[hod.email])
                 msg.body = f"""
-                Dear {incharge.first_name},
+                Dear {hod.first_name},
 
-                 A new leave request has been submitted by {user.first_name} {user.last_name}.
+                 A new outing request has been submitted by {user.first_name} {user.last_name}.
 
                  🏫 Department: {user.dept}
                  📌 Student: {user.first_name} {user.last_name} ({user.regd})
@@ -674,8 +668,6 @@ def submit_permission():
                  Start Time: {data.get('start_time') or 'N/A'}
                  End Time: {data.get('end_time') or 'N/A'}
                  Reason: {data.get('reason')}
-
-                 
 
                 {'Letter: ' + url_for('static', filename=new_request.letter_path.split('/', 1)[1], _external=True) if new_request.letter_path else ''}
                 Please log in to the faculty dashboard to review and take action on this request.
@@ -690,7 +682,11 @@ def submit_permission():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Database error: {str(e)}"}), 500
+    
 
+
+
+    
 def allowed_file(filename, allowed_extensions={'png', 'jpg', 'jpeg'}):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
