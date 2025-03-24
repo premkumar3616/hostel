@@ -2,7 +2,7 @@ from flask import Flask, render_template, redirect, url_for, request, session, j
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
-from datetime import datetime, timedelta,timezone, UTC,time
+from datetime import datetime, timedelta, UTC,time
 from urllib.parse import quote
 from apscheduler.schedulers.background import BackgroundScheduler
 from itsdangerous import URLSafeTimedSerializer
