@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
 from datetime import datetime, timedelta, timezone as dt_timezone, time as dt_time  # Rename time to dt_time
-
+from flask_cors import CORS
 from urllib.parse import quote
 from apscheduler.schedulers.background import BackgroundScheduler
 from itsdangerous import URLSafeTimedSerializer
@@ -29,6 +29,8 @@ import zipfile
 import time
 import uuid
 app = Flask(__name__)
+CORS(app)
+
 UPLOAD_FOLDER = 'static/uploads/'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
