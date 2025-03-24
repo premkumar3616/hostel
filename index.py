@@ -23,6 +23,10 @@ from cryptography.fernet import Fernet
 # import time
 import json
 import traceback
+import shutil
+import zipfile
+import time
+import uuid
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static/uploads/'
 if not os.path.exists(UPLOAD_FOLDER):
@@ -1456,13 +1460,6 @@ def viewFaculty():
     
 #     return redirect(url_for('addStudent'))
 
-import zipfile
-import os
-import shutil
-
-import zipfile
-import os
-import shutil
 
 @app.route('/upload1', methods=['POST'])
 def upload1():
@@ -1481,17 +1478,22 @@ def upload1():
     
     photo_target_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'students')
     if not os.path.exists(photo_target_dir):
-        os.makedirs(photo_target_dir)
+        os.makedirs(photo_target_dir, exist_ok=True)
+    
+    # Use a unique temporary directory to avoid conflicts
+    temp_extract_dir = os.path.join(app.config['UPLOAD_FOLDER'], f'temp_extract_{uuid.uuid4().hex}')
     
     try:
-        temp_extract_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'temp_extract')
-        if os.path.exists(temp_extract_dir):
-            shutil.rmtree(temp_extract_dir)
-        os.makedirs(temp_extract_dir)
+        # Create the unique temporary directory
+        os.makedirs(temp_extract_dir, exist_ok=True)
+        print(f"Created temporary directory: {temp_extract_dir}")
         
+        # Extract ZIP
         with zipfile.ZipFile(zip_filepath, 'r') as zip_ref:
+            print(f"Extracting ZIP to: {temp_extract_dir}")
             zip_ref.extractall(temp_extract_dir)
         
+        # Find CSV file
         csv_file = None
         for root, dirs, files in os.walk(temp_extract_dir):
             for file in files:
@@ -1505,7 +1507,10 @@ def upload1():
             flash('No CSV file found in ZIP', 'error')
             return redirect(url_for('addStudent'))
         
-        with open(csv_file, 'r') as csvfile:
+        print(f"Found CSV file: {csv_file}")
+        
+        # Process CSV
+        with open(csv_file, 'r', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 if not any(row.values()):
@@ -1528,19 +1533,25 @@ def upload1():
                     flash(f"Photo {photo_filename} not found in ZIP for regd {row['regd']}", 'warning')
                     photo_db_path = None
                 else:
-                    photo_target_path = os.path.join(photo_target_dir, photo_filename)
+                    # Use unique filename to avoid overwriting
+                    unique_photo_filename = f"{row['regd']}_{photo_filename}"
+                    photo_target_path = os.path.join(photo_target_dir, unique_photo_filename)
                     if os.path.exists(photo_target_path):
                         os.remove(photo_target_path)
                     shutil.move(photo_source_path, photo_target_path)
-                    # Use forward slashes for the database path
-                    photo_db_path = f"students/{photo_filename}"
+                    photo_db_path = f"students/{unique_photo_filename}"
+                    print(f"Moved photo from {photo_source_path} to {photo_target_path}")
+                
+                gender = row.get('gender')
+                if not gender:  # Treat empty string or None as missing
+                    gender = 'not prefer to say'
                 
                 hashed_password = generate_password_hash(row['password'])
                 new_user = User(
                     regd=row['regd'],
                     first_name=row['first_name'],
                     last_name=row['last_name'],
-                    gender=row.get('gender', 'not prefer to say'),
+                    gender=gender,
                     email=row['email'],
                     dept=row['dept'],
                     student_phone=row['student_phone'],
@@ -1554,16 +1565,41 @@ def upload1():
             db.session.commit()
         
         flash('Students and photos processed successfully', 'success')
+    
     except Exception as e:
         db.session.rollback()
         flash(f'Error processing ZIP: {str(e)}', 'error')
-    finally:
-        if os.path.exists(zip_filepath):
-            os.remove(zip_filepath)
-        if os.path.exists(temp_extract_dir):
-            shutil.rmtree(temp_extract_dir)
+        print(f"Exception occurred: {str(e)}")
     
+    finally:
+        # Cleanup with detailed debugging
+        if os.path.exists(zip_filepath):
+            try:
+                os.remove(zip_filepath)
+                print(f"Deleted ZIP file: {zip_filepath}")
+            except Exception as e:
+                print(f"Failed to delete ZIP file {zip_filepath}: {e}")
+        
+        if os.path.exists(temp_extract_dir):
+            for attempt in range(3):
+                try:
+                    shutil.rmtree(temp_extract_dir)
+                    print(f"Successfully deleted {temp_extract_dir} on attempt {attempt + 1}")
+                    break
+                except PermissionError as e:
+                    print(f"Attempt {attempt + 1}: PermissionError deleting {temp_extract_dir}: {e}")
+                    # List contents to debug what’s locked
+                    for root, dirs, files in os.walk(temp_extract_dir):
+                        print(f"Contents of {root}: dirs={dirs}, files={files}")
+                    time.sleep(2)  # Increased delay to allow locks to release
+                except Exception as e:
+                    print(f"Attempt {attempt + 1}: Unexpected error deleting {temp_extract_dir}: {e}")
+                    break
+            else:
+                print(f"Failed to delete {temp_extract_dir} after 3 attempts. Leaving it for manual cleanup.")
+
     return redirect(url_for('addStudent'))
+
 
 
 @app.route('/add_single_student', methods=['POST'])
@@ -1600,18 +1636,22 @@ def add_single_student():
             
         if file and allowed_file(file.filename, IMAGE_EXTENSIONS):
             filename = secure_filename(file.filename)
-            file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            # Save to static/uploads/students
+            photo_target_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'students')
+            if not os.path.exists(photo_target_dir):
+                os.makedirs(photo_target_dir, exist_ok=True)
+            file_path = os.path.join(photo_target_dir, filename)
             file.save(file_path)
-            photo_path = filename
+            photo_path = f"students/{filename}"  # Store relative path
         else:
             flash('Invalid file type', 'error')
             return redirect(url_for('addStudent'))
 
-       
         new_user = User(
             regd=regd,
             first_name=first_name,
             last_name=last_name,
+            gender=gender,
             email=email,
             dept=dept,
             student_phone=student_phone,
@@ -1633,6 +1673,7 @@ def add_single_student():
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('addStudent'))
     
+
 @app.route('/delete_student', methods=['POST'])
 def delete_student():
     if 'username' not in session or session.get('category') != 'admin':
@@ -1649,6 +1690,23 @@ def delete_student():
         try:
             # Delete associated permissions
             PermissionRequest.query.filter_by(student_regd=regd).delete()
+
+            # Delete the student's photo from static/uploads/students
+            if student.photo:
+                # Construct the full path based on the stored photo value
+                if student.photo.startswith('students/'):
+                    photo_path = os.path.join(app.config['UPLOAD_FOLDER'], student.photo)
+                else:
+                    # For photos added via add_single_student, assume they're directly in uploads
+                    photo_path = os.path.join(app.config['UPLOAD_FOLDER'], 'students', student.photo)
+                
+                if os.path.exists(photo_path):
+                    os.remove(photo_path)
+                    print(f"Deleted photo: {photo_path}")
+                else:
+                    print(f"Photo not found: {photo_path}")
+
+            # Delete the student record
             db.session.delete(student)
             db.session.commit()
             flash(f'Success! Student {regd} deleted permanently', 'success')
@@ -1701,7 +1759,23 @@ def delete_csv():
                     if regd:
                         student = User.query.filter_by(regd=regd).first()
                         if student:
+                            # Delete associated permissions
                             PermissionRequest.query.filter_by(student_regd=regd).delete()
+                            
+                            # Delete the student's photo from static/uploads/students
+                            if student.photo:
+                                if student.photo.startswith('students/'):
+                                    photo_path = os.path.join(app.config['UPLOAD_FOLDER'], student.photo)
+                                else:
+                                    photo_path = os.path.join(app.config['UPLOAD_FOLDER'], 'students', student.photo)
+                                
+                                if os.path.exists(photo_path):
+                                    os.remove(photo_path)
+                                    print(f"Deleted photo: {photo_path}")
+                                else:
+                                    print(f"Photo not found: {photo_path}")
+                            
+                            # Delete the student record
                             db.session.delete(student)
                             deleted_count += 1
                             
@@ -1724,6 +1798,7 @@ def delete_csv():
         flash('Only CSV files allowed', 'error')
     
     return redirect(url_for('removeStudent'))
+
 
 @app.route('/get_student')
 def get_student():
