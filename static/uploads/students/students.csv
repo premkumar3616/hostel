@@ -1,0 +1,18 @@
+regd,first_name,last_name,gender,email,dept,student_phone,parent_phone,address,password,photo,category
+22K61A4701,Nani Prasad,Arella,Male,naniprasad.arella@sasi.ac.in,ECT,9876543201,8765432101,Hyderabad,22K61A4701,22K61A4701.jpg,Student
+22K61A4702,Naga Sai Shanmukha,Cherukuri,Male,shanmukha.cherukuri@sasi.ac.in,CIC,8074034329,6304079895,Anakapalli,22K61A4702,22K61A4702.jpg,Student
+22K61A4703,Sindhu Abhirami,Kunireddy,Female,sindhu.kunireddy@sasi.ac.in,CIC,8106549566,8500468609,Rajahmundry,22K61A4703,22K61A4703.jpg,Student
+22K61A4704,Monika,Eluri,Female,monika.eluri@sasi.ac.in,CIC,7671035752,9949329157,Kadiyadda,22K61A4704,22K61A4704.jpg,Student
+22K61A4705,Suvarna,Enugu,Female,suvarna.enugu@sasi.ac.in,CIC,9704953023,8106076204,Arugolanu,22K61A4705,22K61A4705.jpg,Student
+22K61A4706,Sindhu Bhargavi,Garapati,Female,bhargavi.garapati@sasi.ac.in,CIC,9502917209,9502581112,Nidadavole,22K61A4706,22K61A4706.jpg,Student
+22K61A4707,Ganapathi,Itakula,Male,ganapathi.itakula@sasi.ac.in,CIC,9550987918,9885837349,Relangi,22K61A4707,22K61A4707.jpg,Student
+22K61A4708,Subhash,Naidu,Male,subhash.naidu@sasi.ac.in,CIC,9640038330,9640038332,Pothavaram,22K61A4708,22K61A4708.jpg,Student
+22K61A4709,Pavan Venkata Kumar,Nuni,Male,pavan.nuni@sasi.ac.in,CIC,7337224253,7337294253,Chodavaram,22K61A4709,22K61A4709.jpg,Student
+22K61A4710,Prem Kumar,Pragada,Male,premkumar.pragada@sasi.ac.in,CSE,9440963616,9440963616,Tanuku,22K61A4710,22K61A4710.jpg,Student
+22K61A4711,Dhana Kishore,Gummala,Male,kishore.gummalla@sasi.a.in,CIC,7893715148,7893715148,Undrajavaram,22K61A4711,22K61A4711.jpg,Student
+22K61A4712,Pooja,Vema,Female,pooja.vema@sasi.ac.in,CSE,9876543212,8765432112,Jaipur,22K61A4712,22K61A4712.jpg,Student
+22K61A4713,Vishnu Vardhan,Muramulla,Male,vishnu.muramulla@sasi.ac.in,CSE,7075685064,7075685064,Rajahmundry,22K61A4713,22K61A4713.jpg,Student
+22K61A4714,Venkat,Thummalapalli,Male,venkat.tummulapalli@sasi.ac.in,MECH,9876543215,8765432115,Pothavaram,22K61A4714,22K61A4714.jpg,Student
+22K61A4715,Harish,Subbu,Male,harish.sabbu@sasi.ac.in,CIVIL,8121929288,9959732599,Thanuku,22K61A4715,22K61A4715.jpg,Student
+22K61A4716,Chanikya Akkaiah,Kolli,,chanikya.kolli@sasi.ac.in,CST,9391722533,9391722533,Gudipadu,22K61A4716,22K61A4716.jpg,Student
+22K61A4717,Manohar,sunkavalli,Male,manohar.sunkavali@sasi.ac.in,CSE,81060 20469,81060 20469,Chowdary mansion,22K61A4717,22K61A4717.JPG,Student

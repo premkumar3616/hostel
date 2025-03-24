@@ -387,7 +387,12 @@ a {
         width: 180px;
         height: 180px;
     }
-
+    .student-photo .main-photo {
+        display: none;
+    }
+    .student-photo {
+        display: none; /* Optionally hide the entire container */
+    }
     .permission-btn {
         font-size: 14px;
         padding: 10px;
@@ -415,3 +420,12 @@ a {
     display: block;
     margin: 0 auto; /* Center logo */
 }
+/* Hide the large student photo in mobile view (425px and below) */
+/* @media (max-width: 425px) {
+    .student-photo .main-photo {
+        display: none;
+    }
+    .student-photo {
+        display: none; 
+    }
+} */

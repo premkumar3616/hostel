@@ -51,10 +51,10 @@
     <div class="form-section">
       <h2>Upload CSV File</h2>
       <form id="csv-upload-form" action="{{ url_for('upload1') }}" method="post" enctype="multipart/form-data">
-        <label for="student-file">Upload CSV (columns: regd,first_name,last_name,email,dept,student_phone,parent_phone,address,password,photo,category)</label>
-        <input type="file" id="student-file" name="file" accept=".csv" required>
-        <button type="submit">Upload CSV</button>
-      </form>
+        <label for="file">Upload CSV and Photos (ZIP):</label>
+        <input type="file" id="file" name="file" accept=".zip" required>
+        <button type="submit">Upload</button>
+    </form>
     </div>
 
     <!-- Single Student Entry Section -->

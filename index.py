@@ -24,7 +24,7 @@ from cryptography.fernet import Fernet
 import json
 import traceback
 app = Flask(__name__)
-UPLOAD_FOLDER = 'static/uploads'
+UPLOAD_FOLDER = 'static/uploads/'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg'}
@@ -81,8 +81,8 @@ class User(db.Model):
     gender = db.Column(db.String(30), nullable=True, default='not prefer to say')
     email = db.Column(db.String(120), unique=True, nullable=False)
     dept = db.Column(db.String(10), nullable=False)
-    student_phone = db.Column(db.String(10), nullable=False)
-    parent_phone = db.Column(db.String(10), nullable=False)  # New field
+    student_phone = db.Column(db.String(15), nullable=False)
+    parent_phone = db.Column(db.String(15), nullable=False)  # New field
     address = db.Column(db.String(150), nullable=False)
     password = db.Column(db.String(256), nullable=False)  # Hashed password
     photo = db.Column(db.String(150), nullable=True)  # Photo path
@@ -1387,6 +1387,83 @@ def viewFaculty():
     return render_template('view_faculty_details.html')
 
 
+# @app.route('/upload1', methods=['POST'])
+# def upload1():
+#     if 'file' not in request.files:
+#         flash('No file selected', 'error')
+#         return redirect(request.url)
+    
+#     file = request.files['file']
+#     if file.filename == '' or not allowed_file(file.filename, CSV_EXTENSIONS):
+#         flash('Invalid file type. Only CSV files are allowed.', 'error')
+#         return redirect(request.url)
+    
+#     filename = secure_filename(file.filename)
+#     filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+#     file.save(filepath)
+    
+#     try:
+#         with open(filepath, 'r') as csvfile:
+#             reader = csv.DictReader(csvfile)
+#             for row in reader:
+#                 if not any(row.values()):
+#                     continue
+                
+#                 row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in row.items()}
+#                 required_fields = ['regd', 'first_name', 'email']
+#                 if not all(row.get(field) for field in required_fields):
+#                     flash(f"Missing required fields in row: {row}", 'error')
+#                     continue
+                
+#                 existing_user = User.query.filter_by(regd=row['regd']).first()
+#                 if existing_user:
+#                     flash(f"Student with regd {row['regd']} already exists", 'warning')
+#                     continue
+                
+#                 # Verify photo exists
+#                 photo_filename = row['photo']
+#                 photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo_filename)
+#                 if not os.path.exists(photo_path):
+#                     flash(f"Photo {photo_filename} not found for regd {row['regd']}", 'warning')
+#                     photo_db_path = None
+#                 else:
+#                     photo_db_path = photo_filename
+                
+#                 hashed_password = generate_password_hash(row['password'])
+#                 new_user = User(
+#                     regd=row['regd'],
+#                     first_name=row['first_name'],
+#                     last_name=row['last_name'],
+#                     gender=row.get('gender', 'not prefer to say'),
+#                     email=row['email'],
+#                     dept=row['dept'],
+#                     student_phone=row['student_phone'],
+#                     parent_phone=row['parent_phone'],
+#                     address=row['address'],
+#                     password=hashed_password,
+#                     photo=photo_db_path,
+#                     category=row['category']
+#                 )
+#                 db.session.add(new_user)
+#             db.session.commit()
+        
+#         flash('CSV file processed successfully', 'success')
+#     except Exception as e:
+#         db.session.rollback()
+#         flash(f'Error processing CSV: {str(e)}', 'error')
+#     finally:
+#         os.remove(filepath)
+    
+#     return redirect(url_for('addStudent'))
+
+import zipfile
+import os
+import shutil
+
+import zipfile
+import os
+import shutil
+
 @app.route('/upload1', methods=['POST'])
 def upload1():
     if 'file' not in request.files:
@@ -1394,16 +1471,41 @@ def upload1():
         return redirect(request.url)
     
     file = request.files['file']
-    if file.filename == '' or not allowed_file(file.filename, CSV_EXTENSIONS):
-        flash('Invalid file type. Only CSV files are allowed.', 'error')
+    if file.filename == '' or not file.filename.endswith('.zip'):
+        flash('Please upload a valid ZIP file', 'error')
         return redirect(request.url)
     
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    file.save(filepath)
+    zip_filename = secure_filename(file.filename)
+    zip_filepath = os.path.join(app.config['UPLOAD_FOLDER'], zip_filename)
+    file.save(zip_filepath)
+    
+    photo_target_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'students')
+    if not os.path.exists(photo_target_dir):
+        os.makedirs(photo_target_dir)
     
     try:
-        with open(filepath, 'r') as csvfile:
+        temp_extract_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'temp_extract')
+        if os.path.exists(temp_extract_dir):
+            shutil.rmtree(temp_extract_dir)
+        os.makedirs(temp_extract_dir)
+        
+        with zipfile.ZipFile(zip_filepath, 'r') as zip_ref:
+            zip_ref.extractall(temp_extract_dir)
+        
+        csv_file = None
+        for root, dirs, files in os.walk(temp_extract_dir):
+            for file in files:
+                if file.endswith('.csv'):
+                    csv_file = os.path.join(root, file)
+                    break
+            if csv_file:
+                break
+        
+        if not csv_file:
+            flash('No CSV file found in ZIP', 'error')
+            return redirect(url_for('addStudent'))
+        
+        with open(csv_file, 'r') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 if not any(row.values()):
@@ -1420,14 +1522,18 @@ def upload1():
                     flash(f"Student with regd {row['regd']} already exists", 'warning')
                     continue
                 
-                # Verify photo exists
                 photo_filename = row['photo']
-                photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo_filename)
-                if not os.path.exists(photo_path):
-                    flash(f"Photo {photo_filename} not found for regd {row['regd']}", 'warning')
+                photo_source_path = os.path.join(os.path.dirname(csv_file), photo_filename)
+                if not os.path.exists(photo_source_path):
+                    flash(f"Photo {photo_filename} not found in ZIP for regd {row['regd']}", 'warning')
                     photo_db_path = None
                 else:
-                    photo_db_path = photo_filename
+                    photo_target_path = os.path.join(photo_target_dir, photo_filename)
+                    if os.path.exists(photo_target_path):
+                        os.remove(photo_target_path)
+                    shutil.move(photo_source_path, photo_target_path)
+                    # Use forward slashes for the database path
+                    photo_db_path = f"students/{photo_filename}"
                 
                 hashed_password = generate_password_hash(row['password'])
                 new_user = User(
@@ -1447,14 +1553,19 @@ def upload1():
                 db.session.add(new_user)
             db.session.commit()
         
-        flash('CSV file processed successfully', 'success')
+        flash('Students and photos processed successfully', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'Error processing CSV: {str(e)}', 'error')
+        flash(f'Error processing ZIP: {str(e)}', 'error')
     finally:
-        os.remove(filepath)
+        if os.path.exists(zip_filepath):
+            os.remove(zip_filepath)
+        if os.path.exists(temp_extract_dir):
+            shutil.rmtree(temp_extract_dir)
     
     return redirect(url_for('addStudent'))
+
+
 @app.route('/add_single_student', methods=['POST'])
 def add_single_student():
     try:
