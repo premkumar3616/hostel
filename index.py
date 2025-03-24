@@ -1394,71 +1394,67 @@ def upload1():
         return redirect(request.url)
     
     file = request.files['file']
-    if file.filename == '':
-        flash('No selected file', 'error')
+    if file.filename == '' or not allowed_file(file.filename, CSV_EXTENSIONS):
+        flash('Invalid file type. Only CSV files are allowed.', 'error')
         return redirect(request.url)
     
-    if file and allowed_file(file.filename,CSV_EXTENSIONS):
-        filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
-
-        try:
-            with open(filepath, 'r') as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    # Skip empty rows
-                    if not any(row.values()):
-                        continue
-
-                    # Strip whitespace from keys and values
-                    row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in row.items()}
-
-                    # Validate required fields
-                    required_fields = ['regd', 'first_name', 'email']
-                    if not all(row.get(field) for field in required_fields):
-                        flash(f"Missing required fields in row: {row}", 'error')
-                        continue
-                    
-                    # Check for duplicates
-                    existing_user = User.query.filter_by(regd=row['regd']).first()
-                    if existing_user:
-                        flash(f"Student with regd {row['regd']} already exists", 'warning')
-                        continue
-                    
-                    # Hash the password
-                    hashed_password = generate_password_hash(row['password'])
-                    
-                    # Create new User object
-                    new_user = User(
-                        regd=row['regd'],
-                        first_name=row['first_name'],
-                        last_name=row['last_name'],
-                        gender=row.get('gender', 'not prefer to say'),  # Default value if gender is missing
-                        email=row['email'],
-                        dept=row['dept'],
-                        student_phone=row['student_phone'],
-                        parent_phone=row['parent_phone'],
-                        address=row['address'],
-                        password=hashed_password,
-                        photo=row['photo'],
-                        category=row['category']
-                    )
-                    
-                    db.session.add(new_user)
-                db.session.commit()
-            
-            flash('CSV file processed successfully', 'success')
-        except Exception as e:
-            db.session.rollback()
-            flash(f'Error processing CSV: {str(e)}', 'error')
-        finally:
-            os.remove(filepath)  # Delete the file after processing
-    else:
-        flash('Invalid file type. Only CSV files are allowed.', 'error')
+    filename = secure_filename(file.filename)
+    filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    file.save(filepath)
+    
+    try:
+        with open(filepath, 'r') as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                if not any(row.values()):
+                    continue
+                
+                row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in row.items()}
+                required_fields = ['regd', 'first_name', 'email']
+                if not all(row.get(field) for field in required_fields):
+                    flash(f"Missing required fields in row: {row}", 'error')
+                    continue
+                
+                existing_user = User.query.filter_by(regd=row['regd']).first()
+                if existing_user:
+                    flash(f"Student with regd {row['regd']} already exists", 'warning')
+                    continue
+                
+                # Verify photo exists
+                photo_filename = row['photo']
+                photo_path = os.path.join(app.config['UPLOAD_FOLDER'], photo_filename)
+                if not os.path.exists(photo_path):
+                    flash(f"Photo {photo_filename} not found for regd {row['regd']}", 'warning')
+                    photo_db_path = None
+                else:
+                    photo_db_path = photo_filename
+                
+                hashed_password = generate_password_hash(row['password'])
+                new_user = User(
+                    regd=row['regd'],
+                    first_name=row['first_name'],
+                    last_name=row['last_name'],
+                    gender=row.get('gender', 'not prefer to say'),
+                    email=row['email'],
+                    dept=row['dept'],
+                    student_phone=row['student_phone'],
+                    parent_phone=row['parent_phone'],
+                    address=row['address'],
+                    password=hashed_password,
+                    photo=photo_db_path,
+                    category=row['category']
+                )
+                db.session.add(new_user)
+            db.session.commit()
+        
+        flash('CSV file processed successfully', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error processing CSV: {str(e)}', 'error')
+    finally:
+        os.remove(filepath)
     
     return redirect(url_for('addStudent'))
-
 @app.route('/add_single_student', methods=['POST'])
 def add_single_student():
     try:
