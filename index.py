@@ -2,7 +2,8 @@ from flask import Flask, render_template, redirect, url_for, request, session, j
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_mail import Mail, Message
-from datetime import datetime, timedelta, UTC,time
+from datetime import datetime, timedelta, timezone as dt_timezone, time as dt_time  # Rename time to dt_time
+
 from urllib.parse import quote
 from apscheduler.schedulers.background import BackgroundScheduler
 from itsdangerous import URLSafeTimedSerializer
@@ -25,7 +26,7 @@ import json
 import traceback
 import shutil
 import zipfile
-# import time
+import time
 import uuid
 app = Flask(__name__)
 UPLOAD_FOLDER = 'static/uploads/'
@@ -573,8 +574,8 @@ def submit_permission():
             outing_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d').date()
             start_time = datetime.strptime(data.get('start_time'), '%H:%M').time()
             end_time = datetime.strptime(data.get('end_time'), '%H:%M').time()
-            # Use datetime.time objects for comparison
-            if outing_date.weekday() <= 5 and start_time >= time(8, 30) and end_time <= time(16, 30):
+            # Use dt_time instead of time to avoid conflict
+            if outing_date.weekday() <= 5 and start_time >= dt_time(8, 30) and end_time <= dt_time(16, 30):
                 new_request.hod_status = "Pending"
 
         db.session.add(new_request)
@@ -682,11 +683,10 @@ def submit_permission():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Database error: {str(e)}"}), 500
-    
 
 
 
-    
+
 def allowed_file(filename, allowed_extensions={'png', 'jpg', 'jpeg'}):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
 
@@ -951,7 +951,7 @@ def send_email(subject, body, recipient):
 def check_expired_permissions_and_notify():
     with app.app_context():
         try:
-            ist = timezone('Asia/Kolkata')
+            ist = dt_timezone('Asia/Kolkata')  # Use dt_timezone instead of timezone
             current_time = datetime.now(ist)
             
             # Fetch all approved, unresolved requests where check-out has happened and notification not sent
@@ -998,8 +998,8 @@ def check_expired_permissions_and_notify():
                     start_time = datetime.strptime(request.start_time, "%H:%M").time()
                     end_time = datetime.strptime(request.end_time, "%H:%M").time()
                     is_working_hours = (outing_date.weekday() <= 5 and 
-                                       start_time >= time(8, 30) and 
-                                       end_time <= time(16, 30))
+                                       start_time >= dt_time(8, 30) and  # Use dt_time
+                                       end_time <= dt_time(16, 30))      # Use dt_time
 
                     # Notify Incharge (always notified)
                     if incharge:
@@ -1066,7 +1066,6 @@ def check_expired_permissions_and_notify():
         except Exception as e:
             print(f"Error in check_expired_permissions: {str(e)}")
             traceback.print_exc()
-
 
             
 
