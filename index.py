@@ -78,7 +78,7 @@ class User(db.Model):
     regd = db.Column(db.String(80), primary_key=True, nullable=False)  # Username & Password
     first_name = db.Column(db.String(80), nullable=False)
     last_name = db.Column(db.String(80), nullable=True)
-    gender = db.Column(db.String(10), nullable=True, default='not prefer to say')
+    gender = db.Column(db.String(30), nullable=True, default='not prefer to say')
     email = db.Column(db.String(120), unique=True, nullable=False)
     dept = db.Column(db.String(10), nullable=False)
     student_phone = db.Column(db.String(10), nullable=False)
