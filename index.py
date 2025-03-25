@@ -576,21 +576,21 @@ def submit_permission():
             outing_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d').date()
             start_time = datetime.strptime(data.get('start_time'), '%H:%M').time()
             end_time = datetime.strptime(data.get('end_time'), '%H:%M').time()
-            # Use dt_time instead of time to avoid conflict
             if outing_date.weekday() <= 5 and start_time >= dt_time(8, 30) and end_time <= dt_time(16, 30):
                 new_request.hod_status = "Pending"
 
         db.session.add(new_request)
         db.session.commit()
 
-        # Email sending logic remains unchanged
+        # Email sending logic with None checks
         if permission_type == "Leave":
             hod = Faculty.query.filter_by(dept=user.dept, category="HOD").first()
             incharge = Faculty.query.filter_by(category="Incharge").first()
+
             if hod:
                 msg = Message("New Leave Request - HOD", sender="pragadaprem143@gmail.com", recipients=[hod.email])
                 msg.body = f"""
-                Dear {incharge.first_name},
+                Dear {hod.first_name},
 
                  A new leave request has been submitted by {user.first_name} {user.last_name}.
 
@@ -608,6 +608,9 @@ def submit_permission():
                  Admin
                 """
                 mail.send(msg)
+            else:
+                print(f"No HOD found for department {user.dept}")
+
             if incharge:
                 msg = Message("New Leave Request - Incharge", sender="pragadaprem143@gmail.com", recipients=[incharge.email])
                 msg.body = f"""
@@ -630,6 +633,9 @@ def submit_permission():
                  Admin
                 """
                 mail.send(msg)
+            else:
+                print("No Incharge found")
+
         elif permission_type == "Outing":
             incharge = Faculty.query.filter_by(category="Incharge").first()
             hod = Faculty.query.filter_by(dept=user.dept, category="HOD").first()
@@ -685,7 +691,6 @@ def submit_permission():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Database error: {str(e)}"}), 500
-
 
 
 
