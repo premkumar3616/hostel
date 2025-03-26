@@ -428,19 +428,6 @@ def toggle_status():
         return jsonify({"success": False, "message": f"Error toggling status: {str(e)}"}), 500
 
 
-@app.route('/student_dashboard/<regd_no>')
-def student_dashboard(regd_no):
-    if 'username' not in session or session.get('category') not in ['hod', 'incharge']:
-        return redirect(url_for('home'))
-    student = User.query.filter_by(regd=regd_no).first()
-    if not student:
-        return "Student not found", 404
-    all_requests = PermissionRequest.query.filter_by(student_regd=student.regd).order_by(PermissionRequest.timestamp.desc()).all()
-
-    return render_template('student.html', user=student, all_requests=all_requests)
-
-
-
 @app.route('/admin_dashboard')
 @login_required(role='admin')
 def admin():
@@ -958,7 +945,7 @@ def send_email(subject, body, recipient):
 def check_expired_permissions_and_notify():
     with app.app_context():
         try:
-            ist = dt_timezone('Asia/Kolkata')  # Use dt_timezone instead of timezone
+            ist = timezone('Asia/Kolkata')  # Use pytz.timezone, not dt_timezone
             current_time = datetime.now(ist)
             
             # Fetch all approved, unresolved requests where check-out has happened and notification not sent
@@ -1055,7 +1042,7 @@ def check_expired_permissions_and_notify():
                             """
                             send_email(subject, body, hod.email)
 
-                    # Notify the student (unchanged)
+                    # Notify the student
                     student_subject = "Action Required: Late Return Notification"
                     student_body = f"""
                     Dear {request.student_name},
@@ -1073,7 +1060,6 @@ def check_expired_permissions_and_notify():
         except Exception as e:
             print(f"Error in check_expired_permissions: {str(e)}")
             traceback.print_exc()
-
             
 
 @app.route('/check_in', methods=['POST'])
@@ -1243,9 +1229,13 @@ def get_student_details():
     data = request.get_json()
     student_regd = data.get("student_regd")
 
-    # Ensure the student can only fetch their own details
+    # Restrict students to their own details
     if session['category'] == 'student' and student_regd != session['username']:
         return jsonify({"success": False, "message": "You can only access your own details"}), 403
+
+    # Allow faculty (hod/incharge) or admin to access any student's details
+    if session['category'] not in ['hod', 'incharge', 'admin', 'student']:
+        return jsonify({"success": False, "message": "Unauthorized role"}), 403
 
     student = User.query.filter_by(regd=student_regd).first()
     if not student:
@@ -1257,7 +1247,7 @@ def get_student_details():
         "department": student.dept,
         "phone": student.student_phone,
         "email": student.email,
-        "gender": student.gender,  # Include gender for the form
+        "gender": student.gender,
         "photo": student.photo,
         "leave_requests": PermissionRequest.query.filter(
             PermissionRequest.student_regd == student_regd,
@@ -1265,9 +1255,7 @@ def get_student_details():
             PermissionRequest.status == "Approved",
             PermissionRequest.check_out_time.isnot(None)
         ).count(),
-
-        # Count accepted outing requests where check_out_time is not null
-        "outing_requests" : PermissionRequest.query.filter(
+        "outing_requests": PermissionRequest.query.filter(
             PermissionRequest.student_regd == student_regd,
             PermissionRequest.permission_type == "Outing",
             PermissionRequest.status == "Approved",
@@ -1279,6 +1267,36 @@ def get_student_details():
         ).count()
     }
     return jsonify({"success": True, "student": student_data})
+
+@app.route('/get_student_permission_history', methods=['POST'])
+def get_student_permission_history():
+    if 'username' not in session or session['category'] not in ['hod', 'incharge']:
+        return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+    data = request.get_json()
+    student_regd = data.get("student_regd")
+    if not student_regd:
+        return jsonify({"success": False, "message": "Student registration number required"}), 400
+
+    # Fetch all permission requests for the student, sorted by timestamp (latest first)
+    requests = PermissionRequest.query.filter_by(student_regd=student_regd).order_by(PermissionRequest.timestamp.desc()).all()
+
+    if not requests:
+        return jsonify({"success": True, "message": "No permission history found", "requests": []})
+
+    request_list = [{
+        "permission_type": req.permission_type,
+        "start_date": req.start_date,
+        "end_date": req.end_date,
+        "start_time": req.start_time,
+        "end_time": req.end_time,
+        "reason": req.reason,
+        "incharge_status": req.incharge_status,
+        "hod_status": req.hod_status,
+        "status": req.status
+    } for req in requests]
+
+    return jsonify({"success": True, "requests": request_list})
 
 def reset_permissions_db():
     with app.app_context():

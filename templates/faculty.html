@@ -10,7 +10,7 @@
 <body>
   <div class="preloader">
     <img src="static/sasiicon.png" alt="Preloader" class="preloader-icon">
-</div>
+  </div>
   <div class="container">
     <h1 class="dashboard-title">Faculty Dashboard</h1>
     
@@ -67,7 +67,7 @@
             {% for request in leave_requests %}
             <tr id="request-{{ request.id }}">
               <td class="student-name">{{ request.student_name }}</td>
-              <td><a href="/student_dashboard/{{ request.student_regd }}" class="student-link">{{ request.student_regd }}</a></td>
+              <td><span class="student-link" onclick="showStudentDetails('{{ request.student_regd }}')">{{ request.student_regd }}</span></td>
               <td>{{ request.permission_type }}</td>
               <td>
                 {% if request.letter_path %}
@@ -109,7 +109,7 @@
       </div>
     </div>
 
-    <!-- Expired Requests Table (unchanged) -->
+    <!-- Expired Requests Table -->
     {% if faculty.category.lower() == 'incharge' %}
     <div class="expired-requests-table-container">
       <div class="table-header">
@@ -132,7 +132,7 @@
             {% for request in expired_requests %}
             <tr id="request-{{ request.id }}">
               <td>{{ request.student_name }}</td>
-              <td><a href="/student_dashboard/{{ request.student_regd }}">{{ request.student_regd }}</a></td>
+              <td><span class="student-link" onclick="showStudentDetails('{{ request.student_regd }}')">{{ request.student_regd }}</span></td>
               <td>{{ request.permission_type }}</td>
               <td>
                 {% if request.letter_path %}
@@ -165,23 +165,143 @@
     {% endif %}
   </div>
 
-  <!-- Popup and Overlay -->
+  <!-- Popup and Overlay for Letter -->
   <div id="overlay" class="overlay" onclick="closeLetter()"></div>
   <div id="letter-popup" class="popup">
     <img id="letter-image" src="" alt="Permission Letter">
   </div>
+
+  <!-- Student Details Modal -->
+  <div id="student-details-modal" class="modal">
+    <div class="modal-content">
+      <span class="close-btn" onclick="closeStudentDetails()">×</span>
+      <h2>Student Details</h2>
+      <div class="student-modal-header">
+        <div class="student-photo">
+          <img id="student-photo-img" src="" alt="Student Photo">
+        </div>
+        <div id="student-details-content">
+          <!-- Student basic details will be loaded here -->
+        </div>
+      </div>
+      <h3>Permission History</h3>
+      <div id="permission-history-content">
+        <!-- Permission history table will be loaded here -->
+      </div>
+    </div>
+  </div>
+
   <script>
     // Hide preloader after a delay when the page is fully loaded
     window.addEventListener('load', function () {
-        const preloader = document.querySelector('.preloader');
-        const container = document.querySelector('.container');
-
-        setTimeout(function () {
-            preloader.classList.add('hidden');
-            container.classList.add('visible');
-        }, 2000); // 2-second delay
+      const preloader = document.querySelector('.preloader');
+      const container = document.querySelector('.container');
+      setTimeout(function () {
+        preloader.classList.add('hidden');
+        container.classList.add('visible');
+      }, 2000); // 2-second delay
     });
-</script>
+  </script>
+  <script>
+    function showStudentDetails(regd) {
+      const modal = document.getElementById('student-details-modal');
+      modal.style.display = 'block';
+
+      fetch('/get_student_details', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_regd: regd })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          const student = data.student;
+          const photoUrl = student.photo ? `/static/uploads/${student.photo}` : '/static/default_student_photo.jpg'; // Fallback if no photo
+          document.getElementById('student-photo-img').src = photoUrl;
+          const content = `
+            <p><strong>Name:</strong> ${student.name}</p>
+            <p><strong>Register Number:</strong> ${student.register_number}</p>
+            <p><strong>Department:</strong> ${student.department}</p>
+            <p><strong>Phone:</strong> ${student.phone}</p>
+            <p><strong>Email:</strong> ${student.email}</p>
+            <p><strong>Gender:</strong> ${student.gender}</p>
+            <p><strong>Accepted Leave Requests:</strong> ${student.leave_requests}</p>
+            <p><strong>Accepted Outing Requests:</strong> ${student.outing_requests}</p>
+            <p><strong>Resolved Requests:</strong> ${student.resolved_requests}</p>
+          `;
+          document.getElementById('student-details-content').innerHTML = content;
+        } else {
+          document.getElementById('student-photo-img').src = '/static/default_student_photo.jpg'; // Fallback on error
+          document.getElementById('student-details-content').innerHTML = `<p>${data.message || 'Error fetching student details'}</p>`;
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching student details:', error);
+        document.getElementById('student-photo-img').src = '/static/default_student_photo.jpg'; // Fallback on error
+        document.getElementById('student-details-content').innerHTML = '<p>Error loading student details</p>';
+      });
+
+      fetch('/get_student_permission_history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_regd: regd })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          let historyHtml = `
+            <table>
+              <tr>
+                <th>Request Type</th>
+                <th>Start</th>
+                <th>End</th>
+                <th>Reason</th>
+                <th>In-Charge Status</th>
+                <th>HOD Status</th>
+                <th>Final Status</th>
+              </tr>
+          `;
+          data.requests.forEach(req => {
+            const start = req.start_date ? req.start_date : (req.start_time ? `${req.start_date} ${req.start_time}` : 'N/A');
+            const end = req.end_date ? req.end_date : (req.end_time ? `${req.start_date} ${req.end_time}` : 'N/A');
+            historyHtml += `
+              <tr>
+                <td>${req.permission_type}</td>
+                <td>${start}</td>
+                <td>${end}</td>
+                <td>${req.reason}</td>
+                <td>${req.incharge_status}</td>
+                <td>${req.hod_status}</td>
+                <td>${req.status}</td>
+              </tr>
+            `;
+          });
+          historyHtml += '</table>';
+          document.getElementById('permission-history-content').innerHTML = historyHtml;
+        } else {
+          document.getElementById('permission-history-content').innerHTML = `<p>${data.message || 'No permission history available'}</p>`;
+        }
+      })
+      .catch(error => {
+        console.error('Error fetching permission history:', error);
+        document.getElementById('permission-history-content').innerHTML = '<p>Error loading permission history</p>';
+      });
+    }
+
+    function closeStudentDetails() {
+      document.getElementById('student-details-modal').style.display = 'none';
+      document.getElementById('student-photo-img').src = ''; // Clear photo
+      document.getElementById('student-details-content').innerHTML = '';
+      document.getElementById('permission-history-content').innerHTML = '';
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById('student-details-modal');
+      if (event.target == modal) {
+        closeStudentDetails();
+      }
+    }
+  </script>
   <script>
     function toggleStatus() {
       fetch('/toggle_status', {
