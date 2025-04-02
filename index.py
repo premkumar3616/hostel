@@ -88,6 +88,7 @@ class User(db.Model):
     gender = db.Column(db.String(30), nullable=True, default='not prefer to say')
     email = db.Column(db.String(120), unique=True, nullable=False)
     dept = db.Column(db.String(10), nullable=False)
+    year_sem = db.Column(db.String(5), nullable=False, default='1-1')
     student_phone = db.Column(db.String(15), nullable=False)
     parent_phone = db.Column(db.String(15), nullable=False)  # New field
     address = db.Column(db.String(150), nullable=False)
@@ -158,6 +159,25 @@ def login_required(role=None):
 @app.route('/')
 def home():
     return render_template('index.html')
+
+def update_year_sem():
+    with app.app_context():
+        ist = timezone('Asia/Kolkata')
+        current_time = datetime.now(ist)
+        students = User.query.all()
+
+        for student in students:
+            current_year, current_sem = map(int, student.year_sem.split('-'))
+            # Check if 5.5 months have passed since the last update
+            # For simplicity, assume this runs every 6 months and update accordingly
+            if current_sem == 1:
+                student.year_sem = f"{current_year}-2"
+            elif current_sem == 2 and current_year < 4:
+                student.year_sem = f"{current_year + 1}-1"
+            # If 4-2, no further update (final semester)
+
+        db.session.commit()
+        print(f"Updated year_sem for all students at {current_time}")
 
 
 
@@ -541,11 +561,14 @@ def submit_permission():
             return jsonify({"message": "Invalid file type. Only PNG, JPG, or JPEG files are allowed."}), 400
 
     try:
+        # Determine the department for the permission request
+        request_dept = "AS&H" if user.year_sem in ["1-1", "1-2"] else user.dept
+
         new_request = PermissionRequest(
             student_regd=user.regd,
             student_name=f"{user.first_name} {user.last_name}",
             student_email=user.email,
-            dept=user.dept,
+            dept=request_dept,  # Use request_dept instead of user.dept
             permission_type=permission_type,
             start_time=data.get('start_time'),
             end_time=data.get('end_time'),
@@ -569,11 +592,16 @@ def submit_permission():
         db.session.add(new_request)
         db.session.commit()
 
+        # Determine recipients based on year_sem (this part remains unchanged)
+        if user.year_sem in ["1-1", "1-2"]:
+            hod = Faculty.query.filter_by(dept="AS&H", category="HOD").first()  # A&S&H HOD
+            incharge = Faculty.query.filter_by(category="Hostel Incharge").first()  # Hostel Incharge
+        else:
+            hod = Faculty.query.filter_by(dept=user.dept, category="HOD").first()  # Department HOD
+            incharge = Faculty.query.filter_by(category="Incharge").first()  # General Incharge
+
         # Email sending logic with None checks
         if permission_type == "Leave":
-            hod = Faculty.query.filter_by(dept=user.dept, category="HOD").first()
-            incharge = Faculty.query.filter_by(category="Incharge").first()
-
             if hod:
                 msg = Message("New Leave Request - HOD", sender="pragadaprem143@gmail.com", recipients=[hod.email])
                 msg.body = f"""
@@ -596,10 +624,11 @@ def submit_permission():
                 """
                 mail.send(msg)
             else:
-                print(f"No HOD found for department {user.dept}")
+                print(f"No HOD found for {'AS&H' if user.year_sem in ['1-1', '1-2'] else user.dept}")
 
             if incharge:
-                msg = Message("New Leave Request - Incharge", sender="pragadaprem143@gmail.com", recipients=[incharge.email])
+                msg = Message(f"New Leave Request - {'Hostel ' if user.year_sem in ['1-1', '1-2'] else ''}Incharge", 
+                              sender="pragadaprem143@gmail.com", recipients=[incharge.email])
                 msg.body = f"""
                 Dear {incharge.first_name},
 
@@ -621,13 +650,12 @@ def submit_permission():
                 """
                 mail.send(msg)
             else:
-                print("No Incharge found")
+                print(f"No {'Hostel ' if user.year_sem in ['1-1', '1-2'] else ''}Incharge found")
 
         elif permission_type == "Outing":
-            incharge = Faculty.query.filter_by(category="Incharge").first()
-            hod = Faculty.query.filter_by(dept=user.dept, category="HOD").first()
             if incharge:
-                msg = Message("New Outing Request - Incharge", sender="pragadaprem143@gmail.com", recipients=[incharge.email])
+                msg = Message(f"New Outing Request - {'Hostel ' if user.year_sem in ['1-1', '1-2'] else ''}Incharge", 
+                              sender="pragadaprem143@gmail.com", recipients=[incharge.email])
                 msg.body = f"""
                 Dear {incharge.first_name},
 
@@ -678,16 +706,12 @@ def submit_permission():
     except Exception as e:
         db.session.rollback()
         return jsonify({"message": f"Database error: {str(e)}"}), 500
+    
 
 
 
 def allowed_file(filename, allowed_extensions={'png', 'jpg', 'jpeg'}):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in allowed_extensions
-
-
-
-
-
 
 def send_sms_fast2sms(phone_number, message):
     url = "https://www.fast2sms.com/dev/bulkV2"
@@ -1221,6 +1245,53 @@ def forbidden(e):
     return render_template('403.html'), 403  # Create a 403.html template for unauthorized access
 
 
+# @app.route('/get_student_details', methods=['POST'])
+# def get_student_details():
+#     if 'username' not in session:
+#         return jsonify({"success": False, "message": "Unauthorized"}), 401
+
+#     data = request.get_json()
+#     student_regd = data.get("student_regd")
+
+#     # Restrict students to their own details
+#     if session['category'] == 'student' and student_regd != session['username']:
+#         return jsonify({"success": False, "message": "You can only access your own details"}), 403
+
+#     # Allow faculty (hod/incharge) or admin to access any student's details
+#     if session['category'] not in ['hod', 'incharge', 'admin', 'student']:
+#         return jsonify({"success": False, "message": "Unauthorized role"}), 403
+
+#     student = User.query.filter_by(regd=student_regd).first()
+#     if not student:
+#         return jsonify({"success": False, "message": "Student not found"}), 404
+
+#     student_data = {
+#         "name": f"{student.first_name} {student.last_name}",
+#         "register_number": student.regd,
+#         "department": student.dept,
+#         "phone": student.student_phone,
+#         "email": student.email,
+#         "gender": student.gender,
+#         "photo": student.photo,
+#         "leave_requests": PermissionRequest.query.filter(
+#             PermissionRequest.student_regd == student_regd,
+#             PermissionRequest.permission_type == "Leave",
+#             PermissionRequest.status == "Approved",
+#             PermissionRequest.check_out_time.isnot(None)
+#         ).count(),
+#         "outing_requests": PermissionRequest.query.filter(
+#             PermissionRequest.student_regd == student_regd,
+#             PermissionRequest.permission_type == "Outing",
+#             PermissionRequest.status == "Approved",
+#             PermissionRequest.check_out_time.isnot(None)
+#         ).count(),
+#         "resolved_requests": PermissionRequest.query.filter(
+#             PermissionRequest.student_regd == student_regd,
+#             PermissionRequest.status == "Resolved"
+#         ).count()
+#     }
+#     return jsonify({"success": True, "student": student_data})
+
 @app.route('/get_student_details', methods=['POST'])
 def get_student_details():
     if 'username' not in session:
@@ -1248,7 +1319,7 @@ def get_student_details():
         "phone": student.student_phone,
         "email": student.email,
         "gender": student.gender,
-        "photo": student.photo,
+        "photo": student.photo,  # This is currently "students/22K61A4710_22K61A4710.jpg"
         "leave_requests": PermissionRequest.query.filter(
             PermissionRequest.student_regd == student_regd,
             PermissionRequest.permission_type == "Leave",
@@ -1268,51 +1339,79 @@ def get_student_details():
     }
     return jsonify({"success": True, "student": student_data})
 
+# @app.route('/get_student_permission_history', methods=['POST'])
+# def get_student_permission_history():
+#     if 'username' not in session or session['category'] not in ['hod', 'incharge']:
+#         return jsonify({"success": False, "message": "Unauthorized"}), 403
+
+#     data = request.get_json()
+#     student_regd = data.get("student_regd")
+#     if not student_regd:
+#         return jsonify({"success": False, "message": "Student registration number required"}), 400
+
+#     # Fetch all permission requests for the student, sorted by timestamp (latest first)
+#     requests = PermissionRequest.query.filter_by(student_regd=student_regd).order_by(PermissionRequest.timestamp.desc()).all()
+
+#     if not requests:
+#         return jsonify({"success": True, "message": "No permission history found", "requests": []})
+
+#     request_list = []
+#     for req in requests:
+#         request_data = {
+#             "permission_type": req.permission_type,
+#             "start_date": req.start_date,
+#             "end_date": req.end_date,
+#             "start_time": req.start_time,
+#             "end_time": req.end_time,
+#             "reason": req.reason,
+#             "incharge_status": req.incharge_status,
+#             "hod_status": req.hod_status,
+#             "status": req.status,
+#             "check_out_time": req.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if req.check_out_time else None,  # Include check_out_time
+#             "is_resolved": req.is_resolved  # Include is_resolved flag
+#         }
+#         request_list.append(request_data)
+
+#     return jsonify({"success": True, "requests": request_list})
+
 @app.route('/get_student_permission_history', methods=['POST'])
 def get_student_permission_history():
     if 'username' not in session or session['category'] not in ['hod', 'incharge']:
-        return jsonify({"success": False, "message": "Unauthorized"}), 403
+        response = jsonify({"success": False, "message": "Unauthorized"})
+        response.status_code = 403
+        return response
 
     data = request.get_json()
     student_regd = data.get("student_regd")
     if not student_regd:
-        return jsonify({"success": False, "message": "Student registration number required"}), 400
+        response = jsonify({"success": False, "message": "Student registration number required"})
+        response.status_code = 400
+        return response
 
-    # Fetch all permission requests for the student, sorted by timestamp (latest first)
     requests = PermissionRequest.query.filter_by(student_regd=student_regd).order_by(PermissionRequest.timestamp.desc()).all()
 
     if not requests:
         return jsonify({"success": True, "message": "No permission history found", "requests": []})
 
-    request_list = [{
-        "permission_type": req.permission_type,
-        "start_date": req.start_date,
-        "end_date": req.end_date,
-        "start_time": req.start_time,
-        "end_time": req.end_time,
-        "reason": req.reason,
-        "incharge_status": req.incharge_status,
-        "hod_status": req.hod_status,
-        "status": req.status
-    } for req in requests]
+    request_list = []
+    for req in requests:
+        request_data = {
+            "permission_type": req.permission_type,
+            "start_date": req.start_date,
+            "end_date": req.end_date,
+            "start_time": req.start_time,
+            "end_time": req.end_time,
+            "reason": req.reason,
+            "incharge_status": req.incharge_status,
+            "hod_status": req.hod_status,
+            "status": req.status,
+            "check_out_time": req.check_out_time.strftime('%Y-%m-%d %H:%M:%S') if req.check_out_time else None,
+            "check_in_time": req.check_in_time.strftime('%Y-%m-%d %H:%M:%S') if req.check_in_time else None,
+            "is_resolved": req.is_resolved
+        }
+        request_list.append(request_data)
 
     return jsonify({"success": True, "requests": request_list})
-
-def reset_permissions_db():
-    with app.app_context():
-        # Calculate the timestamp for 6 months ago
-        six_months_ago = datetime.now(timezone.utc) - timedelta(days = 180)
-        # Query and delete old permission requests
-        old_requests = PermissionRequest.query.filter(
-            PermissionRequest.timestamp < six_months_ago
-        ).all()
-
-        for request in old_requests:
-            db.session.delete(request)
-
-        db.session.commit()
-        print("✅ Old permission requests (older than 6 months) deleted successfully.")
-
 
 @app.route('/addStudent')
 @login_required(role='admin')  # Only admin can access
@@ -1437,6 +1536,7 @@ def resolve_permission():
     except Exception as e:
         db.session.rollback()
         return jsonify({"success": False, "message": f"Error resolving permission: {str(e)}"}), 500
+
 
 
 @app.route('/addFaculty')
@@ -1586,7 +1686,7 @@ def upload1():
                     continue
                 
                 row = {k.strip(): v.strip() if isinstance(v, str) else v for k, v in row.items()}
-                required_fields = ['regd', 'first_name', 'email']
+                required_fields = ['regd', 'first_name', 'email', 'year_sem']
                 if not all(row.get(field) for field in required_fields):
                     flash(f"Missing required fields in row: {row}", 'error')
                     continue
@@ -1623,6 +1723,7 @@ def upload1():
                     gender=gender,
                     email=row['email'],
                     dept=row['dept'],
+                    year_sem=row['year_sem'],
                     student_phone=row['student_phone'],
                     parent_phone=row['parent_phone'],
                     address=row['address'],
@@ -1674,44 +1775,33 @@ def upload1():
 @app.route('/add_single_student', methods=['POST'])
 def add_single_student():
     try:
-        # Extract form data
         regd = request.form['regd']
         first_name = request.form['first_name']
         last_name = request.form['last_name']
         gender = request.form.get('gender', 'not prefer to say')
         email = request.form['email']
         dept = request.form['dept']
+        year_sem = request.form['year_sem']  # New field
         student_phone = request.form['student_phone']
         parent_phone = request.form['parent_phone']
         address = request.form['address']
         password = request.form['password']
         category = request.form['category']
 
-        # Check for existing registration number
         existing_user = User.query.filter_by(regd=regd).first()
         if existing_user:
             flash('Error: Registration number already exists', 'error')
             return redirect(url_for('addStudent'))
 
-        # Process file upload
-        if 'photo' not in request.files:
-            flash('No file uploaded', 'error')
-            return redirect(url_for('addStudent'))
-        
+        # Photo handling remains the same
         file = request.files['photo']
-        if file.filename == '':
-            flash('No selected file', 'error')
-            return redirect(url_for('addStudent'))
-            
         if file and allowed_file(file.filename, IMAGE_EXTENSIONS):
             filename = secure_filename(file.filename)
-            # Save to static/uploads/students
             photo_target_dir = os.path.join(app.config['UPLOAD_FOLDER'], 'students')
-            if not os.path.exists(photo_target_dir):
-                os.makedirs(photo_target_dir, exist_ok=True)
+            os.makedirs(photo_target_dir, exist_ok=True)
             file_path = os.path.join(photo_target_dir, filename)
             file.save(file_path)
-            photo_path = f"students/{filename}"  # Store relative path
+            photo_path = f"students/{filename}"
         else:
             flash('Invalid file type', 'error')
             return redirect(url_for('addStudent'))
@@ -1723,6 +1813,7 @@ def add_single_student():
             gender=gender,
             email=email,
             dept=dept,
+            year_sem=year_sem,  # Add year_sem
             student_phone=student_phone,
             parent_phone=parent_phone,
             address=address,
@@ -1733,7 +1824,6 @@ def add_single_student():
 
         db.session.add(new_user)
         db.session.commit()
-
         flash('Student added successfully!', 'success')
         return redirect(url_for('addStudent'))
 
@@ -1741,6 +1831,7 @@ def add_single_student():
         db.session.rollback()
         flash(f'Error: {str(e)}', 'error')
         return redirect(url_for('addStudent'))
+    
     
 
 @app.route('/delete_student', methods=['POST'])
@@ -2190,7 +2281,54 @@ def get_all_faculty():
         return jsonify({"success": True, "faculty": faculty_data})
     except Exception as e:
         return jsonify({"success": False, "message": str(e)}), 500
-    
+
+def delete_graduated_students():
+    with app.app_context():
+        try:
+            ist = timezone('Asia/Kolkata')
+            current_time = datetime.now(ist)
+            print(f"Running delete_graduated_students job at {current_time}")
+
+            # Fetch all students in "4-2"
+            students = User.query.filter_by(year_sem="4-2").all()
+            if not students:
+                print("No students in 4-2 found.")
+                return
+
+            # Estimate the end of "4-2" semester
+            # Assume "4-2" started 165 days ago from the last update (adjust as per your academic calendar)
+            semester_duration = timedelta(days=165)  # Duration of a semester
+            grace_period = timedelta(days=60)       # Two months after semester ends
+            deletion_threshold = current_time - (semester_duration + grace_period)
+
+            deleted_count = 0
+            for student in students:
+               
+                PermissionRequest.query.filter_by(student_regd=student.regd).delete()
+                
+                # Delete student's photo if it exists
+                if student.photo:
+                    photo_path = os.path.join(app.config['UPLOAD_FOLDER'], student.photo)
+                    if os.path.exists(photo_path):
+                        os.remove(photo_path)
+                        print(f"Deleted photo for {student.regd}: {photo_path}")
+                    else:
+                        print(f"Photo not found for {student.regd}: {photo_path}")
+
+                db.session.delete(student)
+                deleted_count += 1
+                print(f"Deleted student {student.regd} from 4-2.")
+
+            if deleted_count > 0:
+                db.session.commit()
+                print(f"Deleted {deleted_count} graduated students.")
+            else:
+                print("No students deleted - either none expired or already processed.")
+
+        except Exception as e:
+            db.session.rollback()
+            print(f"Error in delete_graduated_students: {str(e)}")
+            traceback.print_exc()  
 
 
 if __name__ == '__main__':
@@ -2204,6 +2342,8 @@ if __name__ == '__main__':
     scheduler = BackgroundScheduler()
     scheduler.add_job(func=check_expired_permissions_and_notify, trigger="interval", minutes=2)
     scheduler.add_job(func=delete_expired_qr_codes, trigger="interval", minutes=30)
+    scheduler.add_job(func=update_year_sem, trigger="interval", days=165)
+    scheduler.add_job(func=delete_graduated_students, trigger="interval", days=30)
     scheduler.start()
     atexit.register(lambda: scheduler.shutdown())  
     app.run(port=5002,debug=True)   

@@ -209,7 +209,7 @@ body {
 } */
 
 .student-link {
-  color: #840002; /* Maroon link */
+  color: #840002; /* Maroon link */ 
   text-decoration: none;
 }
 
@@ -395,23 +395,87 @@ body {
 .close-btn:hover {
   color: black;
 }
+.student-details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.detail-item {
+  font-size: 16px;
+  color: #333;
+}
+
+.detail-item strong {
+  color: #b22222;
+  margin-right: 5px;
+}
+
+.student-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 30px;
+  margin-bottom: 20px;
+}
+
+.student-photo {
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid #b22222;
+}
+
+.student-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.modal-content {
+  max-width: 900px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 20px;
+  background: white;
+  border-radius: 10px;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 24px;
+  cursor: pointer;
+  color: #b22222;
+}
 .student-link {
   color: #007bff;
   cursor: pointer;
   text-decoration: underline;
 }
-#permission-history-content table {
+.permission-history-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 10px;
 }
-#permission-history-content th, #permission-history-content td {
+
+.permission-history-table th, .permission-history-table td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
 }
-#permission-history-content th {
+
+.permission-history-table th {
   background-color: #f2f2f2;
+}
+
+.resolved-row {
+  background-color: #e0f7e0; /* Light green background for resolved rows */
+  font-style: italic; /* Optional: italicize resolved rows */
 }
 
 .student-modal-header {

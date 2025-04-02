@@ -172,24 +172,35 @@
   </div>
 
   <!-- Student Details Modal -->
-  <div id="student-details-modal" class="modal">
-    <div class="modal-content">
+  <!-- Student Details Modal -->
+<div id="student-details-modal" class="modal">
+  <div class="modal-content">
       <span class="close-btn" onclick="closeStudentDetails()">×</span>
       <h2>Student Details</h2>
       <div class="student-modal-header">
-        <div class="student-photo">
-          <img id="student-photo-img" src="" alt="Student Photo">
-        </div>
-        <div id="student-details-content">
-          <!-- Student basic details will be loaded here -->
-        </div>
+          <div class="student-photo">
+              <img id="student-photo-img" src="" alt="Student Photo">
+          </div>
+          <div id="student-details-content">
+              <div class="student-details-grid">
+                  <div class="detail-item"><strong>Name:</strong> <span id="student-name"></span></div>
+                  <div class="detail-item"><strong>Register Number:</strong> <span id="student-regd"></span></div>
+                  <div class="detail-item"><strong>Department:</strong> <span id="student-dept"></span></div>
+                  <div class="detail-item"><strong>Phone:</strong> <span id="student-phone"></span></div>
+                  <div class="detail-item"><strong>Email:</strong> <span id="student-email"></span></div>
+                  <div class="detail-item"><strong>Gender:</strong> <span id="student-gender"></span></div>
+                  <div class="detail-item"><strong>Accepted Leave Requests:</strong> <span id="student-leave-requests"></span></div>
+                  <div class="detail-item"><strong>Accepted Outing Requests:</strong> <span id="student-outing-requests"></span></div>
+                  <div class="detail-item"><strong>Resolved Requests:</strong> <span id="student-resolved-requests"></span></div>
+              </div>
+          </div>
       </div>
       <h3>Permission History</h3>
       <div id="permission-history-content">
-        <!-- Permission history table will be loaded here -->
+          <!-- Permission history table will be loaded here -->
       </div>
-    </div>
   </div>
+</div>
 
   <script>
     // Hide preloader after a delay when the page is fully loaded
@@ -204,104 +215,146 @@
   </script>
   <script>
     function showStudentDetails(regd) {
-      const modal = document.getElementById('student-details-modal');
-      modal.style.display = 'block';
+    const modal = document.getElementById('student-details-modal');
+    modal.style.display = 'block';
 
-      fetch('/get_student_details', {
+    // First fetch student details
+    fetch('/get_student_details', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_regd: regd })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          const student = data.student;
-          const photoUrl = student.photo ? `/static/uploads/${student.photo}` : '/static/default_student_photo.jpg'; // Fallback if no photo
-          document.getElementById('student-photo-img').src = photoUrl;
-          const content = `
-            <p><strong>Name:</strong> ${student.name}</p>
-            <p><strong>Register Number:</strong> ${student.register_number}</p>
-            <p><strong>Department:</strong> ${student.department}</p>
-            <p><strong>Phone:</strong> ${student.phone}</p>
-            <p><strong>Email:</strong> ${student.email}</p>
-            <p><strong>Gender:</strong> ${student.gender}</p>
-            <p><strong>Accepted Leave Requests:</strong> ${student.leave_requests}</p>
-            <p><strong>Accepted Outing Requests:</strong> ${student.outing_requests}</p>
-            <p><strong>Resolved Requests:</strong> ${student.resolved_requests}</p>
-          `;
-          document.getElementById('student-details-content').innerHTML = content;
-        } else {
-          document.getElementById('student-photo-img').src = '/static/default_student_photo.jpg'; // Fallback on error
-          document.getElementById('student-details-content').innerHTML = `<p>${data.message || 'Error fetching student details'}</p>`;
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(`Server returned ${response.status}: ${text}`);
+            });
         }
-      })
-      .catch(error => {
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Construct the correct photo path by prepending /static/uploads/
+            const photoPath = data.student.photo ? 
+                `/static/uploads/${data.student.photo}` : '/static/uploads/default.png';
+            document.getElementById('student-photo-img').src = photoPath;
+            
+            // Populate other student details
+            document.getElementById('student-name').innerText = data.student.name;
+            document.getElementById('student-regd').innerText = data.student.register_number;
+            document.getElementById('student-dept').innerText = data.student.department;
+            document.getElementById('student-phone').innerText = data.student.phone;
+            document.getElementById('student-email').innerText = data.student.email;
+            document.getElementById('student-gender').innerText = data.student.gender;
+            document.getElementById('student-leave-requests').innerText = data.student.leave_requests;
+            document.getElementById('student-outing-requests').innerText = data.student.outing_requests;
+            document.getElementById('student-resolved-requests').innerText = data.student.resolved_requests;
+        } else {
+            document.getElementById('student-details-content').innerHTML = `<p>${data.message || 'Error loading student details'}</p>`;
+        }
+    })
+    .catch(error => {
         console.error('Error fetching student details:', error);
-        document.getElementById('student-photo-img').src = '/static/default_student_photo.jpg'; // Fallback on error
-        document.getElementById('student-details-content').innerHTML = '<p>Error loading student details</p>';
-      });
+        document.getElementById('student-details-content').innerHTML = `<p>Error loading student details: ${error.message}</p>`;
+    });
 
-      fetch('/get_student_permission_history', {
+    // Fetch permission history (unchanged)
+    fetch('/get_student_permission_history', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ student_regd: regd })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.success) {
-          let historyHtml = `
-            <table>
-              <tr>
-                <th>Request Type</th>
-                <th>Start</th>
-                <th>End</th>
-                <th>Reason</th>
-                <th>In-Charge Status</th>
-                <th>HOD Status</th>
-                <th>Final Status</th>
-              </tr>
-          `;
-          data.requests.forEach(req => {
-            const start = req.start_date ? req.start_date : (req.start_time ? `${req.start_date} ${req.start_time}` : 'N/A');
-            const end = req.end_date ? req.end_date : (req.end_time ? `${req.start_date} ${req.end_time}` : 'N/A');
-            historyHtml += `
-              <tr>
-                <td>${req.permission_type}</td>
-                <td>${start}</td>
-                <td>${end}</td>
-                <td>${req.reason}</td>
-                <td>${req.incharge_status}</td>
-                <td>${req.hod_status}</td>
-                <td>${req.status}</td>
-              </tr>
-            `;
-          });
-          historyHtml += '</table>';
-          document.getElementById('permission-history-content').innerHTML = historyHtml;
-        } else {
-          document.getElementById('permission-history-content').innerHTML = `<p>${data.message || 'No permission history available'}</p>`;
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => {
+                throw new Error(`Server returned ${response.status}: ${text}`);
+            });
         }
-      })
-      .catch(error => {
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            let historyHtml = `
+                <table class="permission-history-table">
+                    <tr>
+                        <th>Request Type</th>
+                        <th>Start</th>
+                        <th>End</th>
+                        <th>Reason</th>
+                        <th>In-Charge Status</th>
+                        <th>HOD Status</th>
+                        <th>Final Status</th>
+                        <th>Checked Out</th>
+                        <th>Check In</th>
+                    </tr>
+            `;
+            data.requests.forEach(req => {
+                const start = req.start_date ? req.start_date : (req.start_time ? `${req.start_date} ${req.start_time}` : 'N/A');
+                const end = req.end_date ? req.end_date : (req.end_time ? `${req.start_date} ${req.end_time}` : 'N/A');
+                const checkedOut = req.check_out_time ? 'Yes' : 'No';
+                
+                let checkInStatus;
+                if (req.is_resolved) {
+                    checkInStatus = 'Yes (Resolved)';
+                } else if (req.check_in_time) {
+                    checkInStatus = 'Yes';
+                } else if (req.check_out_time) {
+                    const endDateTime = req.permission_type === 'Outing' 
+                        ? new Date(`${req.start_date}T${req.end_time}:00`)
+                        : new Date(`${req.end_date}T23:59:59`);
+                    const gracePeriod = 15 * 60 * 1000;
+                    const currentTime = new Date();
+                    
+                    if (currentTime > (endDateTime.getTime() + gracePeriod)) {
+                        checkInStatus = 'Not Checked In';
+                    } else {
+                        checkInStatus = 'No';
+                    }
+                } else {
+                    checkInStatus = 'No';
+                }
+
+                const rowClass = req.is_resolved ? 'resolved-row' : '';
+                historyHtml += `
+                    <tr class="${rowClass}">
+                        <td>${req.permission_type}</td>
+                        <td>${start}</td>
+                        <td>${end}</td>
+                        <td>${req.reason}</td>
+                        <td>${req.incharge_status}</td>
+                        <td>${req.hod_status}</td>
+                        <td>${req.status}</td>
+                        <td>${checkedOut}</td>
+                        <td>${checkInStatus}</td>
+                    </tr>
+                `;
+            });
+            historyHtml += '</table>';
+            document.getElementById('permission-history-content').innerHTML = historyHtml;
+        } else {
+            document.getElementById('permission-history-content').innerHTML = `<p>${data.message || 'No permission history available'}</p>`;
+        }
+    })
+    .catch(error => {
         console.error('Error fetching permission history:', error);
-        document.getElementById('permission-history-content').innerHTML = '<p>Error loading permission history</p>';
-      });
-    }
+        document.getElementById('permission-history-content').innerHTML = `<p>Error loading permission history: ${error.message}</p>`;
+    });
+}
 
-    function closeStudentDetails() {
-      document.getElementById('student-details-modal').style.display = 'none';
-      document.getElementById('student-photo-img').src = ''; // Clear photo
-      document.getElementById('student-details-content').innerHTML = '';
-      document.getElementById('permission-history-content').innerHTML = '';
-    }
+function closeStudentDetails() {
+    document.getElementById('student-details-modal').style.display = 'none';
+    document.getElementById('student-photo-img').src = '';
+    document.getElementById('student-details-content').innerHTML = '';
+    document.getElementById('permission-history-content').innerHTML = '';
+}
 
-    window.onclick = function(event) {
-      const modal = document.getElementById('student-details-modal');
-      if (event.target == modal) {
+window.onclick = function(event) {
+    const modal = document.getElementById('student-details-modal');
+    if (event.target == modal) {
         closeStudentDetails();
-      }
     }
-  </script>
+}
+    </script>
   <script>
     function toggleStatus() {
       fetch('/toggle_status', {
