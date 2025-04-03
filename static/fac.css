@@ -414,32 +414,32 @@ body {
 
 .student-modal-header {
   display: flex;
-<<<<<<< HEAD
+
   flex-direction: row-reverse; /* Change to row-reverse to move photo to right */
   align-items: flex-start;
   gap: 20px;
-=======
+
   align-items: flex-start;
   gap: 30px;
->>>>>>> d90d0c5d0d656620c5381739f71974fe1ca89721
+
   margin-bottom: 20px;
 }
 
 .student-photo {
-<<<<<<< HEAD
+
   width: 200px;
   height: 200px;
   flex-shrink: 0; /* Prevent photo from shrinking */
   border: 3px solid #840002; /* Maroon border */
   display: inline;
   
-=======
+
   width: 150px;
   height: 150px;
   border-radius: 50%;
   overflow: hidden;
   border: 3px solid #b22222;
->>>>>>> d90d0c5d0d656620c5381739f71974fe1ca89721
+
 }
 
 .student-photo img {
@@ -448,7 +448,6 @@ body {
   object-fit: cover;
 }
 
-<<<<<<< HEAD
 #student-details-content {
   flex-grow: 1;
   flex-basis: 60%;
@@ -459,8 +458,7 @@ body {
   gap: 10px;
 }
 
-=======
->>>>>>> d90d0c5d0d656620c5381739f71974fe1ca89721
+
 .modal-content {
   max-width: 900px;
   width: 90%;
@@ -508,35 +506,27 @@ body {
 
 .student-modal-header {
   display: flex;
-<<<<<<< HEAD
+
   flex-direction: row-reverse;
   align-items: flex-start;
   gap: 30px;
-=======
+
   align-items: flex-start;
   gap: 20px;
->>>>>>> d90d0c5d0d656620c5381739f71974fe1ca89721
+
   margin-bottom: 20px;
 }
 
 .student-photo {
-<<<<<<< HEAD
   width: 250px;
   height: 250px;
-=======
   width: 100px;
   height: 100px;
   border-radius: 50%;
->>>>>>> d90d0c5d0d656620c5381739f71974fe1ca89721
   overflow: hidden;
   background-color: white; /* White background for photo */
   border: 3px solid #840002; /* Maroon border */
   flex-shrink: 0;
-<<<<<<< HEAD
-  border-radius: 8px;
-=======
->>>>>>> d90d0c5d0d656620c5381739f71974fe1ca89721
-}
 
 .student-photo img {
   width: 100%;
