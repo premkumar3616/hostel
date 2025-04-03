@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan QR Code</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="text-center">Scan QR Code</h3>
+                    </div>
+                    <div class="card-body">
+                        <!-- Camera Selection -->
+                        <div id="camera-select" class="form-group">
+                            <label for="camera-selection">Select Camera:</label>
+                            <select id="camera-selection" class="form-control"></select>
+                        </div>
+                        <div id="qr-reader" style="width: 100%;"></div>
+
+                        <!-- File Upload -->
+                        <div class="form-group mt-3">
+                            <label for="qr-file">Or Upload QR Code Image:</label>
+                            <input type="file" id="qr-file" class="form-control-file" accept="image/*">
+                        </div>
+
+                        <div id="qr-reader-results" class="mt-3"></div>
+                        <button id="start-scan-button" class="btn btn-primary mt-3">Start Camera Scan</button>
+                        <button id="stop-scan" class="btn btn-danger mt-3">Stop Scan</button>
+                        <button id="check-in-button" class="btn btn-success mt-3" style="display: none;">Check In</button>
+                        <button id="check-out-button" class="btn btn-warning mt-3" style="display: none;">Check Out</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        fetch('/get_session')
+            .then(response => response.json())
+            .then(data => {
+                if (data.category !== 'security') {
+                    window.location.href = '/';
+                } else {
+                    const html5QrCode = new Html5Qrcode("qr-reader");
+                    let scanning = false;
+                    let selectedCameraId = null;
+                    let decryptedData = null;
+
+                    // Populate camera selection
+                    Html5Qrcode.getCameras().then(devices => {
+                        if (devices && devices.length) {
+                            devices.forEach(device => {
+                                const option = document.createElement('option');
+                                option.value = device.id;
+                                option.text = device.label || `Camera ${device.id}`;
+                                document.getElementById('camera-selection').appendChild(option);
+                            });
+                            selectedCameraId = devices[0].id;
+                        } else {
+                            console.warn("No cameras found.");
+                            document.getElementById('qr-reader-results').innerText = "No cameras available.";
+                        }
+                    }).catch(error => {
+                        console.error("Error getting cameras:", error);
+                        document.getElementById('qr-reader-results').innerText = "Error accessing cameras.";
+                    });
+
+                    // Start camera scanning
+                    function startScan(cameraId) {
+                        scanning = true;
+                        const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+                            if (scanning) {
+                                handleDecodedText(decodedText);
+                                scanning = false;
+                                html5QrCode.stop();
+                            }
+                        };
+                        const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+                        html5QrCode.start(cameraId, config, qrCodeSuccessCallback).catch(err => {
+                            console.error("Error starting scanner:", err);
+                            document.getElementById('qr-reader-results').innerText = `Error starting camera: ${err.message}`;
+                            scanning = false;
+                        });
+                    }
+
+                    // Handle QR code decoding
+                    function handleDecodedText(decodedText) {
+                        console.log(`Decoded QR Code: ${decodedText}`);
+                        document.getElementById('qr-reader-results').innerText = "Decrypting QR code...";
+                        fetch('/decrypt_qr_data', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ encrypted_data: decodedText }),
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.success) {
+                                decryptedData = data.decrypted_data;
+                                document.getElementById('qr-reader-results').innerText = `Decrypted Data: ${decryptedData}`;
+                                document.getElementById('check-in-button').style.display = 'inline-block';
+                                document.getElementById('check-out-button').style.display = 'inline-block';
+                            } else {
+                                document.getElementById('qr-reader-results').innerText = `Failed to decrypt: ${data.message}`;
+                            }
+                        })
+                        .catch(error => {
+                            console.error("Error decrypting QR code data:", error);
+                            document.getElementById('qr-reader-results').innerText = `Error decrypting QR code: ${error.message}`;
+                        });
+                    }
+
+                    // Camera scan button
+                    document.getElementById('start-scan-button').addEventListener('click', () => {
+                        if (!scanning && selectedCameraId) {
+                            startScan(selectedCameraId);
+                        } else if (!selectedCameraId) {
+                            document.getElementById('qr-reader-results').innerText = "Please select a camera first.";
+                        }
+                    });
+
+                    // Stop scan button
+                    document.getElementById('stop-scan').addEventListener('click', () => {
+                        if (scanning) {
+                            scanning = false;
+                            html5QrCode.stop().then(() => {
+                                console.log("Scan stopped.");
+                                document.getElementById('qr-reader-results').innerText = "Scanning stopped.";
+                            }).catch(err => {
+                                console.error("Unable to stop scanning:", err);
+                                document.getElementById('qr-reader-results').innerText = `Error stopping scan: ${err.message}`;
+                            });
+                        }
+                    });
+
+                    // Camera selection change
+                    document.getElementById('camera-selection').addEventListener('change', (event) => {
+                        selectedCameraId = event.target.value;
+                        if (scanning) {
+                            html5QrCode.stop().then(() => {
+                                scanning = false;
+                            });
+                        }
+                    });
+
+                    // File upload handler
+                    document.getElementById('qr-file').addEventListener('change', (event) => {
+                        const file = event.target.files[0];
+                        if (!file) {
+                            document.getElementById('qr-reader-results').innerText = "No file selected.";
+                            return;
+                        }
+                        if (!file.type.startsWith('image/')) {
+                            document.getElementById('qr-reader-results').innerText = "Please upload an image file.";
+                            return;
+                        }
+
+                        document.getElementById('qr-reader-results').innerText = "Scanning QR code from file...";
+                        if (scanning) {
+                            html5QrCode.stop().then(() => {
+                                scanning = false;
+                            });
+                        }
+
+                        html5QrCode.scanFile(file, true)
+                            .then(decodedText => {
+                                handleDecodedText(decodedText);
+                            })
+                            .catch(err => {
+                                console.error("Error scanning file:", err);
+                                document.getElementById('qr-reader-results').innerText = `Error scanning QR code from file: ${err.message}`;
+                            });
+                    });
+
+                    // Check-in button
+                    document.getElementById('check-in-button').addEventListener('click', () => {
+                        if (decryptedData) {
+                            const data = JSON.parse(decryptedData);
+                            fetch('/check_in', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    student_regd: data.student_regd,
+                                    permission_id: data.id
+                                }),
+                            })
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success) {
+                                    alert("Check-in successful!");
+                                    document.getElementById('qr-reader-results').innerText = "Check-in completed.";
+                                } else {
+                                    alert("Check-in failed: " + data.message);
+                                    document.getElementById('qr-reader-results').innerText = `Check-in failed: ${data.message}`;
+                                }
+                            })
+                            .catch(error => {
+                                console.error("Error during check-in:", error);
+                                alert("Error during check-in.");
+                                document.getElementById('qr-reader-results').innerText = `Check-in error: ${error.message}`;
+                            });
+                        }
+                    });
+
+                    // Check-out button
+                    document.getElementById('check-out-button').addEventListener('click', () => {
+                        if (decryptedData) {
+                            const data = JSON.parse(decryptedData);
+                            fetch('/check_out', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    student_regd: data.student_regd,
+                                    permission_id: data.id,
+                                    start_date: data.start_date,
+                                    end_date: data.end_date
+                                }),
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    return response.text().then(text => {
+                                        throw new Error(`Server responded with ${response.status}: ${text}`);
+                                    });
+                                }
+                                return response.json();
+                            })
+                            .then(data => {
+                                if (data.success) {
+                                    alert("Check-out successful!");
+                                    document.getElementById('qr-reader-results').innerText = "Check-out completed.";
+                                } else {
+                                    alert("Check-out failed: " + data.message);
+                                    document.getElementById('qr-reader-results').innerText = `Check-out failed: ${data.message}`;
+                                }
+                            })
+                            .catch(error => {
+                                console.error("Error during check-out:", error);
+                                alert("Error during check-out: " + error.message);
+                                document.getElementById('qr-reader-results').innerText = `Check-out error: ${error.message}`;
+                            });
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching session:', error);
+                window.location.href = '/';
+            });
+    </script>
+</body>
+</html>

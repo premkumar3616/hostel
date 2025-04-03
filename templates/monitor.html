@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitor Students</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='monitor.css') }}">
+</head>
+<body>
+  <div class="container">
+    
+    <div class="navbar">
+      <ul>
+        <li><a href="{{ url_for('admin') }}">Home</a></li>
+        <li class="dropdown">
+          <a href="#" class="dropbtn">Manage Students</a>
+          <div class="dropdown-content">
+            <a href="{{'/addStudent'}}">Add Student</a>
+            <a href="{{'/removeStudent'}}">Remove Student</a>
+            <a href="{{'/modifyStudent'}}">Modify Student Details</a>
+            <a href="{{'/viewStudent'}}">View Student Details</a>
+            <a href="{{'/monitorStudent'}}">Monitor Students</a>
+          </div>
+        </li>
+        <li class="dropdown">
+          <a href="#" class="dropbtn">Manage Faculty</a>
+          <div class="dropdown-content">
+            <a href="{{'/addFaculty'}}">Add Faculty</a>
+            <a href="{{'/removeFaculty'}}">Remove Faculty</a>
+            <a href="{{'/modifyFaculty'}}">Modify Faculty Details</a>
+            <a href="{{'/viewFaculty'}}">View Faculty Details</a>
+          </div>
+        </li>
+        <!-- Logout and Change Password Buttons -->
+        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        <li><a href="{{ url_for('new_password') }}">Change Password</a></li>
+      </ul>
+    </div>
+    <!-- Back Button -->
+    <button class="back-btn" onclick="window.history.back()">Back</button>
+    <!-- Page Title -->
+    <h1>Monitor Students</h1>
+
+    <!-- Department Filter (for Students) -->
+    <div class="department-filter">
+      <label for="dept-select">Select Department:</label>
+      <select id="dept-select" onchange="loadStudentsCheckedOut()">
+        <option value="NONE" selected disabled>Select Department</option>
+        <option value="CSE">CSE</option>
+        <option value="ECE">ECE</option>
+        <option value="MECH">MECH</option>
+        <option value="CIC">CIC</option>
+        <option value="ECT">ECT</option>
+        <option value="CSM">CSM</option>
+        <option value="CSD">CSD</option>
+        <option value="AIML">AIML</option>
+        <option value="CIVIL">CIVIL</option>
+      </select>
+    </div>
+
+    <!-- Student Section -->
+    <div id="student-list">
+      <ul id="student-result-list">
+        <!-- Dynamically generated content will appear here -->
+      </ul>
+    </div>
+  </div>
+
+  <script>
+    function loadStudentsCheckedOut() {
+  const deptSelect = document.getElementById('dept-select');
+  const selectedDept = deptSelect.value;
+
+  console.log(`Fetching data for department: ${selectedDept}`); // Debug
+
+  fetch(`/admin/get_students_checked_out?department=${selectedDept}`)
+    .then(response => response.json())
+    .then(data => {
+      console.log("API Response:", data); // Debug
+      const studentList = document.getElementById('student-result-list');
+      studentList.innerHTML = ''; // Clear existing content
+
+      if (data.success) {
+        console.log(`Found ${data.students.length} students.`); // Debug
+
+        // Filter out students who have already checked in
+        const filteredStudents = data.students.filter(student => !student.check_in_time);
+
+        if (filteredStudents.length === 0) {
+          // If no students are found after filtering, display a message
+          studentList.innerHTML = `<li>No students found who have checked out and not checked in.</li>`;
+        } else {
+          // Display the filtered students
+          filteredStudents.forEach(student => {
+            console.log("Processing student:", student); // Debug
+            const listItem = document.createElement('li');
+            listItem.innerHTML = `
+              <div class="student-details">
+                <div class="student-info">
+                  <strong>${student.first_name} ${student.last_name}</strong><br>
+                  Regd No: ${student.regd}<br>
+                  Email: ${student.email}<br>
+                  Phone: ${student.student_phone}<br>
+                  Parent Phone: ${student.parent_phone}<br>
+                  Department: ${student.dept}<br>
+                  Permission Type: ${student.permission_type}<br>
+                  Start Time: ${student.start_time}<br>
+                  End Time: ${student.end_time}<br>
+                  Start Date: ${student.start_date}<br>
+                  End Date: ${student.end_date}<br>
+                  Check-Out Time: ${student.check_out_time || 'Not Checked Out'}<br>
+                  Reason: ${student.reason}<br>
+                </div>
+                <div class="student-image">
+                  <img src="/static/uploads/${student.photo}" alt="Student Photo">
+                </div>
+              </div>
+            `;
+            studentList.appendChild(listItem);
+          });
+        }
+      } else {
+        console.log("No students found:", data.message); // Debug
+        studentList.innerHTML = `<li>${data.message}</li>`;
+      }
+    })
+    .catch(error => {
+      console.error("Error fetching data:", error); // Debug
+      const studentList = document.getElementById('student-result-list');
+      studentList.innerHTML = `<li>Error fetching data. Please try again.</li>`;
+    });
+}
+
+    // Load the students when the page loads
+    window.onload = function() {
+      loadStudentsCheckedOut(); // Load all students initially
+    };
+  </script>
+  
+</body>
+</html>

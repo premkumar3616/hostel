@@ -1,0 +1,192 @@
+/* Body Styling */
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f2f2f2; /* Light background */
+    color: #333;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    position: relative;
+}
+
+/* Container Styling */
+.container {
+    background: #ffffff; /* White background */
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1); /* Soft shadow */
+    width: 100%;
+    max-width: 350px; /* Limit width */
+    text-align: center;
+    transition: box-shadow 0.3s ease;
+}
+
+.container:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); /* Stronger shadow on hover */
+}
+
+/* Input Fields */
+input {
+    width: auto;
+    padding: 12px;
+    margin: 10px 0;
+    border: 2px solid #ccc;
+    border-radius: 8px; /* Rounded edges */
+    background: #f9f9f9;
+    color: #333;
+    font-size: 14px;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+input:focus {
+    border-color: #840002;
+    box-shadow: 0 0 5px rgba(132, 0, 2, 0.5);
+    outline: none;
+}
+
+/* Buttons */
+button {
+    width: auto;
+    padding: 12px;
+    background: #840002;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+button:hover {
+    background: #6a0002;
+    transform: scale(1.05);
+}
+
+button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
+/* Button Group */
+.button-group {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.button-group button {
+    width: 48%;
+}
+
+/* Error & Success Messages */
+.error {
+    color: #d9534f;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+.success {
+    color: #28a745;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+/* 🔥 Fixed & Styled Back Button */
+#backButton {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #840002;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px 18px;
+    border-radius: 50px;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    text-decoration: none;
+}
+
+/* Arrow Icon */
+#backButton i {
+    font-size: 22px;
+}
+
+/* Hover Effect */
+#backButton:hover {
+    background: white;
+    color: #840002;
+    border: 2px solid #840002;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
+}
+
+/* 📱 Mobile & Tablet View Fix */
+@media (max-width: 768px) {
+    .container {
+        width: 90%;
+        padding: 25px;
+    }
+
+    button {
+        font-size: 15px;
+        padding: 10px;
+    }
+
+    .button-group {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .button-group button {
+        width: 100%;
+    }
+
+    /* 🔥 Mobile-Friendly Back Button */
+    #backButton {
+        top: 15px;
+        left: 15px;
+        font-size: 16px;
+        padding: 8px 15px;
+    }
+
+    #backButton i {
+        font-size: 18px;
+    }
+}
+
+/* 📱 Small Screen Fix */
+@media (max-width: 480px) {
+    body {
+        padding: 10px;
+    }
+
+    .container {
+        padding: 20px;
+    }
+
+    input {
+        font-size: 14px;
+    }
+
+    button {
+        font-size: 14px;
+        padding: 10px;
+    }
+
+    #backButton {
+        font-size: 14px;
+        padding: 6px 12px;
+    }
+
+    #backButton i {
+        font-size: 16px;
+    }
+}

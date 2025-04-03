@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <link rel="stylesheet" href="static/style.css">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+</head>
+<body>
+    <div class="preloader">
+        <img src="static/sasiicon.png" alt="Preloader" class="preloader-icon">
+    </div>
+    <div class="container">
+        <div class="login-card">
+            <div class="logo-container">
+                <img src="static/images.png" alt="Logo" class="logo">
+            </div>
+
+            {% if error %}
+            <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+            
+            <form onsubmit="event.preventDefault(); Login();" action="" method="post">
+                <h2>Login</h2>
+
+                <!-- Username Input -->
+                <div class="input-group">
+                    <i class='bx bx-user'></i> <!-- User Icon -->
+                    <input type="text" id="username" placeholder="Username" required>
+                </div>
+
+                <!-- Password Input -->
+                <div class="input-group">
+                    <i class='bx bx-lock'></i> <!-- Lock Icon -->
+                    <input type="password" id="password" placeholder="Password" required>
+                    <span class="toggle-password" onclick="togglePassword()">👁</span> <!-- Password toggle -->
+                </div>
+
+                <button type="submit" class="btn">Login</button>
+                <p id="message"></p>
+            </form>
+        </div>
+    </div>
+    <script>
+        // Hide preloader after a delay when the page is fully loaded
+        window.addEventListener('load', function () {
+            const preloader = document.querySelector('.preloader');
+            const container = document.querySelector('.container');
+
+            setTimeout(function () {
+                preloader.classList.add('hidden');
+                container.classList.add('visible');
+            }, 800); // 2-second delay
+        });
+    </script>
+    <script type="text/javascript">
+        // Prevent going back after logout
+        window.history.pushState(null, "", window.location.href);
+        window.onpopstate = function () {
+            window.history.pushState(null, "", window.location.href);
+            alert("You can't go back after logout!"); // Optional alert
+        };
+    
+        async function Login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const messageElement = document.getElementById('message');
+    
+            try {
+                console.log(" Sending login request...");
+                console.log("Sending JSON:", JSON.stringify({ username, password }));
+    
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password }),
+                });
+    
+                console.log("Response Status:", response.status);
+    
+                const result = await response.json();
+                console.log("Response Data:", result);
+    
+                // Display message to the user
+                messageElement.textContent = result.message;
+                messageElement.style.color = response.ok ? "green" : "red";
+    
+                // Redirect on successful login
+                if (response.ok) {
+                    window.location.href = result.redirect; // Redirect immediately
+                }
+            } catch (error) {
+                console.error("Fetch Error:", error);
+                messageElement.textContent = "Login failed! Please try again.";
+                messageElement.style.color = "red";
+            }
+        }
+    
+        function togglePassword() {
+            const passwordField = document.getElementById('password');
+            passwordField.type = passwordField.type === 'password' ? 'text' : 'password';
+        }
+    </script>
+      
+</body>
+</html>
