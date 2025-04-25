@@ -63,7 +63,7 @@ ist = timezone('Asia/Kolkata')
 # Database Configuration
 
 # app.config["SQLALCHEMY_DATABASE_URI"] = f"postgresql://postgres:{escaped_password}@localhost:5000/users"
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://sasiusers_user:KbF29ulqMKOcPGRVqzUSeF4kSbo5ax1A@dpg-cvft1nofnakc739rm4og-a.oregon-postgres.render.com/sasiusers"
+app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://users_917l_user:rCd9JZ2J4J3TvzycVVtiIr9eHWr0HpDq@dpg-d05nihq4d50c73f79nl0-a.singapore-postgres.render.com/users_917l"
 
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
